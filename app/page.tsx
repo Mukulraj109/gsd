@@ -1,66 +1,69 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default function Home() {
+  const showTestCredentials =
+    process.env.NODE_ENV !== "production" || process.env.SHOW_TEST_CREDENTIALS === "true"
+
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center">
-      <main className="flex flex-col items-center gap-8 p-8 max-w-4xl">
-        <div className="text-center space-y-4">
-          <h1 className="text-6xl font-bold text-[var(--heading)]">
-            GSD
-          </h1>
-          <p className="text-2xl text-[var(--text)]">
-            Get Stuff Done
-          </p>
-          <p className="text-lg text-[var(--text-muted)] max-w-2xl">
-            Professional task management for the FirstStep Team.
-            Manage tasks, collaborate with your team, and track progress with our Kanban board.
+    <div className="flex min-h-screen flex-col items-center justify-center">
+      <main className="flex max-w-4xl flex-col items-center gap-8 p-8">
+        <div className="space-y-4 text-center">
+          <h1 className="text-6xl font-bold text-[var(--heading)]">GSD</h1>
+          <p className="text-2xl text-[var(--text)]">Get Stuff Done</p>
+          <p className="max-w-2xl text-lg text-[var(--text-muted)]">
+            Professional task management for the FirstStep Team. Manage tasks, collaborate with your team, and track
+            progress with our Kanban board.
           </p>
         </div>
 
-        <div className="flex gap-4 mt-8">
-          <Link href="/board">
-            <Button size="lg">
-              View Task Board
-            </Button>
-          </Link>
+        <div className="mt-8 flex gap-4">
           <Link href="/login">
+            <Button size="lg">Sign In</Button>
+          </Link>
+          <Link href="/signup">
             <Button variant="outline" size="lg">
-              Sign In
+              Create account
             </Button>
           </Link>
         </div>
 
-        <div className="mt-12 p-6 bg-white rounded-lg border border-[var(--border)] max-w-md">
-          <h3 className="font-semibold text-[var(--heading)] mb-3">Test Credentials</h3>
-          <div className="space-y-2 text-sm text-[var(--text)]">
-            <div>
-              <strong>Admin:</strong> admin@gsd.com / password123
+        {showTestCredentials && (
+          <div className="mt-12 max-w-md rounded-lg border border-[var(--border)] bg-white p-6">
+            <h3 className="mb-3 font-semibold text-[var(--heading)]">Test credentials (non-production)</h3>
+            <div className="space-y-2 text-sm text-[var(--text)]">
+              <div>
+                <strong>Admin:</strong> admin@gsd.com / password123
+              </div>
+              <div>
+                <strong>Member:</strong> member@gsd.com / password123
+              </div>
             </div>
-            <div>
-              <strong>Member:</strong> member@gsd.com / password123
-            </div>
+            <p className="mt-3 text-xs text-[var(--text-muted)]">
+              Hidden in production unless <code className="rounded bg-gray-100 px-1">SHOW_TEST_CREDENTIALS=true</code>{" "}
+              is set on the server.
+            </p>
           </div>
-        </div>
+        )}
 
-        <div className="grid grid-cols-3 gap-6 mt-8 text-center">
+        <div className="mt-8 grid grid-cols-1 gap-6 text-center sm:grid-cols-3">
           <div>
             <div className="text-3xl font-bold text-[var(--primary)]">🎯</div>
-            <h4 className="font-semibold mt-2">Kanban Board</h4>
-            <p className="text-sm text-[var(--text-muted)]">Drag & drop tasks</p>
+            <h4 className="mt-2 font-semibold">Kanban Board</h4>
+            <p className="text-sm text-[var(--text-muted)]">Tasks backed by PostgreSQL</p>
           </div>
           <div>
             <div className="text-3xl font-bold text-[var(--secondary)]">👥</div>
-            <h4 className="font-semibold mt-2">Team Directory</h4>
+            <h4 className="mt-2 font-semibold">Team Directory</h4>
             <p className="text-sm text-[var(--text-muted)]">Track workload</p>
           </div>
           <div>
             <div className="text-3xl font-bold text-[var(--success)]">⚡</div>
-            <h4 className="font-semibold mt-2">Automation</h4>
-            <p className="text-sm text-[var(--text-muted)]">Email notifications</p>
+            <h4 className="mt-2 font-semibold">Automation</h4>
+            <p className="text-sm text-[var(--text-muted)]">Rules & notifications</p>
           </div>
         </div>
       </main>
     </div>
-  );
+  )
 }

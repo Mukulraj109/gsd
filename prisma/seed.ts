@@ -119,6 +119,22 @@ async function main() {
     },
   })
 
+  await prisma.activityLog.create({
+    data: {
+      action: 'CREATED',
+      taskId: task3.id,
+      userId: admin.id,
+    },
+  })
+
+  await prisma.activityLog.create({
+    data: {
+      action: 'CREATED',
+      taskId: task4.id,
+      userId: member.id,
+    },
+  })
+
   // Create automation rules
   await prisma.automationRule.create({
     data: {

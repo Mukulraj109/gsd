@@ -164,13 +164,13 @@ A professional task management application built for the FirstStep Team. Manage 
 - **Icon System** - Lucide React icons throughout
 
 ### 🏗️ Technical Stack
-- **Framework:** Next.js 15 (App Router)
+- **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS v4
-- **Database:** SQLite (Prisma ORM)
+- **Database:** PostgreSQL (Prisma ORM) — use [Render PostgreSQL](https://render.com/docs/databases) or any `postgresql://` host in production
 - **State Management:** Zustand (ready for integration)
 - **UI Components:** Radix UI
-- **Authentication:** NextAuth.js (setup ready)
+- **Authentication:** NextAuth.js (credentials, JWT sessions, protected routes)
 - **Icons:** Lucide React
 
 ## 📋 Prerequisites
@@ -193,12 +193,14 @@ A professional task management application built for the FirstStep Team. Manage 
 
 3. **Setup environment variables**
    
-   Create a `.env.local` file with:
+   Create a `.env.local` file (see also [`.env.example`](.env.example)):
    ```
-   DATABASE_URL="file:./prisma/dev.db"
+   DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/gsd"
    NEXTAUTH_URL="http://localhost:3000"
-   NEXTAUTH_SECRET="supersecretkey123456789"
+   NEXTAUTH_SECRET="your-long-random-secret"
    ```
+   
+   Use a local PostgreSQL instance, Docker, or a free-tier hosted DB. The app does **not** use SQLite.
 
 4. **Initialize database**
    ```bash
@@ -216,6 +218,22 @@ A professional task management application built for the FirstStep Team. Manage 
    ```
    http://localhost:3000
    ```
+
+## ☁️ Deploying on Render (PostgreSQL)
+
+1. Create a **PostgreSQL** instance on Render and copy its **Internal Database URL** (same region as your web service is recommended).
+2. Create a **Web Service** from this repo. Set environment variables (see [`.env.render.example`](.env.render.example)):
+   - `DATABASE_URL` — Internal PostgreSQL URL from step 1 (or use Render’s “Link database” so it is injected automatically).
+   - `NEXTAUTH_URL` — Your service URL, e.g. `https://your-service.onrender.com` (HTTPS, no trailing slash).
+   - `NEXTAUTH_SECRET` — Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+3. **Build command** (example):
+   ```bash
+   npm install && npx prisma generate && npx prisma migrate deploy && npm run build
+   ```
+4. **Start command:** `npm run start`
+5. After the first deploy, optionally open **Shell** on the web service and run `npx tsx prisma/seed.ts` to load demo users and tasks.
+
+**Health check:** `GET /api/health` returns JSON `{ "ok": true, "database": true }` when PostgreSQL is reachable (use for Render uptime monitors).
 
 ## 👥 Test Credentials
 

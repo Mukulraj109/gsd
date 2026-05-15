@@ -1,168 +1,134 @@
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+import { format, isToday, isYesterday } from "date-fns"
+import { authOptions } from "@/lib/auth"
+import { getActivityFeed } from "@/lib/queries/activity"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Clock } from "lucide-react"
 
-export default function ActivityPage() {
-  const activities = [
-    {
-      user: "Alex Rivera",
-      action: "changed status to",
-      detail: "IN PROGRESS",
-      task: "GSD-442: Design System Audit",
-      time: "10:42 AM",
-      date: "TODAY",
-    },
-    {
-      user: "Alex Rivera",
-      action: "set priority to",
-      detail: "High",
-      task: "GSD-442: Design System Audit",
-      time: "2:15 PM",
-      date: "YESTERDAY",
-    },
-    {
-      user: "Jane Doe",
-      action: "commented",
-      comment: "I've started auditing the buttons. Most of the primary actions are using hardcoded blue. Will move them to the primary token by EOD.",
-      task: "GSD-442: Design System Audit",
-      time: "11:15 AM",
-      date: "YESTERDAY",
-    },
-    {
-      user: "System",
-      action: "assigned",
-      detail: "Jane Doe",
-      task: "GSD-442: Design System Audit",
-      time: "9:00 AM",
-      date: "YESTERDAY",
-      automated: true,
-    },
-    {
-      user: "Marcus Chen",
-      action: "uploaded",
-      detail: "spec-requirements.pdf",
-      task: "GSD-442: Design System Audit",
-      time: "4:20 PM",
-      date: "2 DAYS AGO",
-    },
-    {
-      user: "Alex Rivera",
-      action: "set priority to",
-      detail: "High",
-      task: "GSD-442: Design System Audit",
-      time: "2:15 PM",
-      date: "2 DAYS AGO",
-    },
-  ]
+function dayLabel(d: Date) {
+  if (isToday(d)) return "TODAY"
+  if (isYesterday(d)) return "YESTERDAY"
+  return format(d, "MMM d, yyyy").toUpperCase()
+}
 
-  const groupedActivities = activities.reduce((acc, activity) => {
-    if (!acc[activity.date]) {
-      acc[activity.date] = []
+function formatActivityDetail(action: string, details: string | null): string | null {
+  if (!details) return null
+  if (action === "STATUS_CHANGED") {
+    try {
+      const j = JSON.parse(details) as { from?: string; to?: string }
+      return `${j.from ?? "?"} → ${j.to ?? "?"}`
+    } catch {
+      return details
     }
-    acc[activity.date].push(activity)
+  }
+  if (action === "ASSIGNED") {
+    try {
+      const j = JSON.parse(details) as { assignedTo?: string }
+      return j.assignedTo ? `Assigned to ${j.assignedTo}` : details
+    } catch {
+      return details
+    }
+  }
+  return details.length > 80 ? `${details.slice(0, 80)}…` : details
+}
+
+export default async function ActivityPage() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) redirect("/login")
+
+  const logs = await getActivityFeed(80)
+
+  const grouped = logs.reduce<Record<string, typeof logs>>((acc, log) => {
+    const key = dayLabel(log.createdAt)
+    if (!acc[key]) acc[key] = []
+    acc[key].push(log)
     return acc
-  }, {} as Record<string, typeof activities>)
+  }, {})
+
+  const order = Object.entries(grouped)
+    .sort(([, a], [, b]) => {
+      const ta = Math.max(...a.map((l) => l.createdAt.getTime()))
+      const tb = Math.max(...b.map((l) => l.createdAt.getTime()))
+      return tb - ta
+    })
+    .map(([k]) => k)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-[var(--heading)]">Activity</h1>
+        <h1 className="text-3xl font-bold text-[var(--heading)]">Activity Timeline</h1>
         <p className="text-[var(--text-muted)]">Track all changes and updates across your workspace.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Activity Feed */}
-        <div className="lg:col-span-2 space-y-6">
-          {Object.entries(groupedActivities).map(([date, items]) => (
-            <div key={date}>
-              <h3 className="text-xs font-semibold text-[var(--text-muted)] mb-4">{date}</h3>
-              <Card className="divide-y divide-[var(--border)]">
-                {items.map((activity, index) => (
-                  <div key={index} className="p-4">
-                    <div className="flex gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {activity.user === "System" ? "⚙️" : activity.user.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-sm text-[var(--text)]">
-                              <span className="font-semibold">{activity.user}</span>{' '}
-                              {activity.action}{' '}
-                              {activity.detail && (
-                                <span className="font-semibold text-[var(--primary)]">{activity.detail}</span>
-                              )}
-                              {activity.automated && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  Automated via Project Rules
-                                </Badge>
-                              )}
-                            </p>
-                            <p className="text-sm text-[var(--text-muted)] mt-1">{activity.task}</p>
+        <div className="lg:col-span-2 space-y-8">
+          {order.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No activity yet.</p>
+          ) : (
+            order.map((dayKey) => (
+              <div key={dayKey}>
+                <div className="mb-4 flex items-center gap-4">
+                  <h2 className="text-sm font-bold tracking-wider text-[var(--text-muted)]">{dayKey}</h2>
+                  <div className="h-px flex-1 bg-[var(--border)]" />
+                </div>
+                <div className="relative space-y-6 pl-8 before:absolute before:left-[11px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-[var(--border)]">
+                  {grouped[dayKey]!.map((log) => {
+                    const actor = log.user?.name ?? log.user?.email ?? "System"
+                    const initials = actor
+                      .split(/\s+/)
+                      .map((p) => p[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()
+                    const detail = formatActivityDetail(log.action, log.details)
+                    return (
+                      <div key={log.id} className="relative">
+                        <div className="absolute -left-8 top-1 z-10 h-6 w-6 rounded-full border-2 border-white bg-[var(--primary)] shadow-sm" />
+                        <Card className="p-4">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold text-[var(--heading)]">{actor}</span>
+                                <span className="text-sm text-[var(--text-muted)]">
+                                  {log.action.toLowerCase().replaceAll("_", " ")}
+                                </span>
+                                {detail && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {detail}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-[var(--text)]">
+                                <span className="font-medium">{log.task?.title ?? "Task"}</span>
+                              </p>
+                              <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                                <Clock className="h-3 w-3" />
+                                {format(log.createdAt, "h:mm a")}
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {activity.time}
-                          </span>
-                        </div>
-                        {activity.comment && (
-                          <div className="bg-gray-50 rounded-lg p-3 text-sm text-[var(--text)]">
-                            <span className="font-medium">primary</span> {activity.comment}
-                          </div>
-                        )}
+                        </Card>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </Card>
-            </div>
-          ))}
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <Card className="p-4">
-            <h3 className="font-semibold mb-4">Activity Summary</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--text-muted)]">Tasks Created</span>
-                <span className="font-semibold">24</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--text-muted)]">Status Changes</span>
-                <span className="font-semibold">45</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--text-muted)]">Comments</span>
-                <span className="font-semibold">89</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--text-muted)]">Attachments</span>
-                <span className="font-semibold">12</span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <h3 className="font-semibold mb-4">Most Active Members</h3>
-            <div className="space-y-3">
-              {["Alex Rivera", "Jane Doe", "Marcus Chen"].map((name, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{name}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{15 - i * 3} actions</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div>
+          <Card className="p-6">
+            <h3 className="mb-2 font-semibold text-[var(--heading)]">Summary</h3>
+            <p className="text-sm text-[var(--text-muted)]">
+              {logs.length} recent events loaded from the database.
+            </p>
           </Card>
         </div>
       </div>
