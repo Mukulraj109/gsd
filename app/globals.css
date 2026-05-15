@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  /* FirstStep Brand Colors */
+  --primary: #0039A6;
+  --primary-hover: #002B7F;
+  --secondary: #007BFF;
+  --secondary-hover: #0056B3;
+  --heading: #1B2559;
+  --background: #F4F7FE;
+  --border: #E2E8F0;
+  --text: #4A5568;
+  --text-muted: #A3AED0;
+  --success: #05CD99;
+  --warning: #FFB547;
+  --error: #EE5D50;
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-heading: var(--heading);
+  --color-background: var(--background);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --radius: 12px;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--heading);
+  font-weight: 600;
+}
