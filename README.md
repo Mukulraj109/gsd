@@ -231,7 +231,18 @@ A professional task management application built for the FirstStep Team. Manage 
    npm install && npx prisma generate && npx prisma migrate deploy && npm run build
    ```
 4. **Start command:** `npm run start`
-5. After the first deploy, optionally open **Shell** on the web service and run `npx tsx prisma/seed.ts` to load demo users and tasks.
+5. **Demo data (admin / member users):** Render’s **free web tier does not include Shell / SSH**, so you cannot run commands in the dashboard terminal. Use **one** of these:
+   - **From your laptop (works on free tier):** In Render → your **PostgreSQL** → copy the **External Database URL** (enable external access if asked). On your machine, from this repo:
+     ```bash
+     set DATABASE_URL=paste-external-url-here
+     npm install
+     npm run db:migrate
+     npm run db:seed
+     ```
+     On macOS/Linux use `export DATABASE_URL='…'` instead of `set`. Run **`db:seed` only once** for a fresh database (it creates sample projects/tasks; re-running can duplicate rows).
+   - **Paid Starter web instance:** Shell is available; then you can `npm run db:migrate` and `npm run db:seed` there instead.
+
+Migrations should already run during **build** if your build command includes `npx prisma migrate deploy` (see step 3). Seeding still requires a machine with `DATABASE_URL` (local or Shell).
 
 **Health check:** `GET /api/health` returns JSON `{ "ok": true, "database": true }` when PostgreSQL is reachable (use for Render uptime monitors).
 

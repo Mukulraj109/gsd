@@ -287,7 +287,7 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
     const t = newTitle.trim()
     if (!t) return
     startTransition(async () => {
-      await createTaskAction(t, columnStatus)
+      await createTaskAction({ title: t, status: columnStatus })
       setNewTitle("")
       setAddingFor(null)
       router.refresh()

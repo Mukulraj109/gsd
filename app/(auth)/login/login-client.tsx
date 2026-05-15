@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-type Props = { oauthGoogle: boolean; oauthGitHub: boolean }
+type Props = { oauthGoogle: boolean; oauthGitHub: boolean; showSeedHints: boolean }
 
-export function LoginClient({ oauthGoogle, oauthGitHub }: Props) {
+export function LoginClient({ oauthGoogle, oauthGitHub, showSeedHints }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
@@ -18,9 +18,6 @@ export function LoginClient({ oauthGoogle, oauthGitHub }: Props) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
-  const showDevHints =
-    process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_SHOW_TEST_CREDENTIALS === "true"
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -136,11 +133,16 @@ export function LoginClient({ oauthGoogle, oauthGitHub }: Props) {
             </Link>
           </p>
 
-          {showDevHints && (
+          {showSeedHints && (
             <div className="mt-6 rounded-lg bg-gray-50 p-4">
-              <p className="mb-2 text-xs font-semibold text-[var(--heading)]">Test accounts (dev / when enabled):</p>
+              <p className="mb-2 text-xs font-semibold text-[var(--heading)]">Demo accounts (after seed):</p>
               <p className="text-xs text-[var(--text-muted)]">Admin: admin@gsd.com / password123</p>
               <p className="text-xs text-[var(--text-muted)]">Member: member@gsd.com / password123</p>
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                If login fails, your DB may be empty: run <code className="rounded bg-gray-100 px-0.5">npx prisma migrate deploy</code> then{" "}
+                <code className="rounded bg-gray-100 px-0.5">npx tsx prisma/seed.ts</code> in the Render shell (same{" "}
+                <code className="rounded bg-gray-100 px-0.5">DATABASE_URL</code>).
+              </p>
             </div>
           )}
         </CardContent>

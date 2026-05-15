@@ -23,16 +23,58 @@ async function logActivity(
   })
 }
 
-export async function createTaskAction(title: string, initialStatus: TaskStatus = "TODO") {
+export type CreateTaskInput = {
+  title: string
+  status?: TaskStatus
+  description?: string
+  priority?: string
+  dueDate?: string | null
+  projectId?: string | null
+  /**
+   * When true (default), missing/empty `projectId` uses the oldest project (quick add).
+   * When false, tasks can be created with no project.
+   */
+  assignDefaultProject?: boolean
+  assigneeId?: string | null
+}
+
+export async function createTaskAction(input: CreateTaskInput) {
   const userId = await requireUserId()
-  if (!TASK_STATUSES.includes(initialStatus)) throw new Error("Invalid status")
-  const trimmed = title.trim()
+  const status = input.status ?? "TODO"
+  if (!TASK_STATUSES.includes(status)) throw new Error("Invalid status")
+  const trimmed = input.title.trim()
   if (!trimmed) throw new Error("Title is required")
 
-  const project = await prisma.project.findFirst({ orderBy: { createdAt: "asc" } })
+  const rawPriority = (input.priority ?? "MEDIUM").toUpperCase()
+  const priority = ["HIGH", "MEDIUM", "LOW"].includes(rawPriority) ? rawPriority : "MEDIUM"
+
+  const assignDefaultProject = input.assignDefaultProject !== false
+  let projectId: string | null = input.projectId?.trim() || null
+  if (projectId) {
+    const exists = await prisma.project.findUnique({ where: { id: projectId } })
+    projectId = exists ? exists.id : null
+  }
+  if (!projectId && assignDefaultProject) {
+    const fallback = await prisma.project.findFirst({ orderBy: { createdAt: "asc" } })
+    projectId = fallback?.id ?? null
+  }
+
+  let assigneeId: string | null = input.assigneeId?.trim() || null
+  if (assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: assigneeId } })
+    assigneeId = assignee ? assignee.id : userId
+  } else {
+    assigneeId = userId
+  }
+
+  let dueDate: Date | undefined
+  if (input.dueDate?.trim()) {
+    const parsed = new Date(input.dueDate.trim())
+    if (!Number.isNaN(parsed.getTime())) dueDate = parsed
+  }
 
   const maxPos = await prisma.task.aggregate({
-    where: { status: initialStatus },
+    where: { status },
     _max: { position: true },
   })
   const position = (maxPos._max.position ?? -1) + 1
@@ -40,12 +82,14 @@ export async function createTaskAction(title: string, initialStatus: TaskStatus 
   const task = await prisma.task.create({
     data: {
       title: trimmed,
-      status: initialStatus,
-      priority: "MEDIUM",
+      description: input.description?.trim() || null,
+      status,
+      priority,
       position,
+      dueDate: dueDate ?? null,
       createdById: userId,
-      assigneeId: userId,
-      projectId: project?.id,
+      assigneeId,
+      projectId,
     },
   })
 

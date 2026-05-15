@@ -1,9 +1,9 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { showSeedCredentialHints } from "@/lib/dev-hints"
 
 export default function Home() {
-  const showTestCredentials =
-    process.env.NODE_ENV !== "production" || process.env.SHOW_TEST_CREDENTIALS === "true"
+  const showTestCredentials = showSeedCredentialHints()
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">
@@ -30,7 +30,7 @@ export default function Home() {
 
         {showTestCredentials && (
           <div className="mt-12 max-w-md rounded-lg border border-[var(--border)] bg-white p-6">
-            <h3 className="mb-3 font-semibold text-[var(--heading)]">Test credentials (non-production)</h3>
+            <h3 className="mb-3 font-semibold text-[var(--heading)]">Demo logins (after running seed)</h3>
             <div className="space-y-2 text-sm text-[var(--text)]">
               <div>
                 <strong>Admin:</strong> admin@gsd.com / password123
@@ -40,8 +40,11 @@ export default function Home() {
               </div>
             </div>
             <p className="mt-3 text-xs text-[var(--text-muted)]">
-              Hidden in production unless <code className="rounded bg-gray-100 px-1">SHOW_TEST_CREDENTIALS=true</code>{" "}
-              is set on the server.
+              Shown locally by default. On hosted builds, set{" "}
+              <code className="rounded bg-gray-100 px-1">NEXT_PUBLIC_SHOW_TEST_CREDENTIALS=true</code> (or{" "}
+              <code className="rounded bg-gray-100 px-1">SHOW_TEST_CREDENTIALS=true</code>) until you go live. If sign-in
+              fails, run <code className="rounded bg-gray-100 px-1">npx prisma migrate deploy</code> then{" "}
+              <code className="rounded bg-gray-100 px-1">npx tsx prisma/seed.ts</code> on this database.
             </p>
           </div>
         )}

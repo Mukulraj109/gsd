@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-type Props = { oauthGoogle: boolean; oauthGitHub: boolean; inviteToken: string }
+type Props = { oauthGoogle: boolean; oauthGitHub: boolean; showSeedHints: boolean; inviteToken: string }
 
 type InviteStatus = "idle" | "pending" | "ok" | "fail"
 
@@ -18,7 +18,7 @@ export function SignupClientGate(props: Omit<Props, "inviteToken">) {
   return <SignupClient key={inviteToken || "__signup__"} {...props} inviteToken={inviteToken} />
 }
 
-export function SignupClient({ oauthGoogle, oauthGitHub, inviteToken }: Props) {
+export function SignupClient({ oauthGoogle, oauthGitHub, inviteToken, showSeedHints }: Props) {
   const router = useRouter()
 
   const [name, setName] = useState("")
@@ -58,8 +58,6 @@ export function SignupClient({ oauthGoogle, oauthGitHub, inviteToken }: Props) {
   }, [inviteToken])
 
   const oauthBlockedByInvite = inviteStatus === "ok"
-  const showDevHints =
-    process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_SHOW_TEST_CREDENTIALS === "true"
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -248,9 +246,9 @@ export function SignupClient({ oauthGoogle, oauthGitHub, inviteToken }: Props) {
             </Link>
           </p>
 
-          {showDevHints && (
+          {showSeedHints && (
             <div className="mt-6 rounded-lg bg-gray-50 p-4">
-              <p className="mb-2 text-xs font-semibold text-[var(--heading)]">Test accounts (dev / when enabled):</p>
+              <p className="mb-2 text-xs font-semibold text-[var(--heading)]">Demo accounts (after seed):</p>
               <p className="text-xs text-[var(--text-muted)]">Admin: admin@gsd.com / password123</p>
               <p className="text-xs text-[var(--text-muted)]">Member: member@gsd.com / password123</p>
             </div>
