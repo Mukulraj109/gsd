@@ -4,11 +4,13 @@ import { TASK_STATUSES, type TaskStatus } from "@/lib/constants/tasks"
 export type BoardTaskRow = {
   id: string
   title: string
+  description: string | null
   status: TaskStatus
   priority: string
   position: number
   dueDate: string | null
   assignee: { name: string | null; initials: string } | null
+  createdBy: { label: string; initials: string } | null
   projectName: string | null
   commentCount: number
   attachmentCount: number
@@ -31,6 +33,7 @@ export async function getBoardTasks(): Promise<BoardTaskRow[]> {
     orderBy: [{ status: "asc" }, { position: "asc" }],
     include: {
       assignee: { select: { name: true, email: true } },
+      createdBy: { select: { name: true, email: true } },
       project: { select: { name: true } },
       _count: { select: { comments: true, attachments: true } },
     },
@@ -47,6 +50,7 @@ export async function getBoardTasks(): Promise<BoardTaskRow[]> {
   return tasks.map((t) => ({
     id: t.id,
     title: t.title,
+    description: t.description,
     status: (TASK_STATUSES.includes(t.status as TaskStatus)
       ? t.status
       : "TODO") as TaskStatus,
@@ -57,6 +61,12 @@ export async function getBoardTasks(): Promise<BoardTaskRow[]> {
       ? {
           name: t.assignee.name,
           initials: initials(t.assignee.name, t.assignee.email),
+        }
+      : null,
+    createdBy: t.createdBy
+      ? {
+          label: t.createdBy.name?.trim() || t.createdBy.email,
+          initials: initials(t.createdBy.name, t.createdBy.email),
         }
       : null,
     projectName: t.project?.name ?? null,

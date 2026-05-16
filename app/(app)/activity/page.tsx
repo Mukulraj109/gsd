@@ -6,7 +6,8 @@ import { getActivityFeed } from "@/lib/queries/activity"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Clock } from "lucide-react"
+import { Clock, Folder } from "lucide-react"
+import { statusToBadgeVariant, priorityLabel } from "@/lib/constants/tasks"
 
 function dayLabel(d: Date) {
   if (isToday(d)) return "TODAY"
@@ -107,6 +108,25 @@ export default async function ActivityPage() {
                               <p className="text-sm text-[var(--text)]">
                                 <span className="font-medium">{log.task?.title ?? "Task"}</span>
                               </p>
+                              {log.task ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {log.task.project?.name ? (
+                                    <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                                      <Folder className="h-3 w-3" />
+                                      {log.task.project.name}
+                                    </span>
+                                  ) : null}
+                                  <Badge variant={statusToBadgeVariant(log.task.status)} className="text-[10px]">
+                                    {log.task.status.replaceAll("_", " ")}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {priorityLabel(log.task.priority)}
+                                  </Badge>
+                                </div>
+                              ) : null}
+                              {log.task?.description ? (
+                                <p className="line-clamp-2 text-xs text-[var(--text-muted)]">{log.task.description}</p>
+                              ) : null}
                               <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
                                 <Clock className="h-3 w-3" />
                                 {format(log.createdAt, "h:mm a")}

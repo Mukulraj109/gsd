@@ -1,19 +1,25 @@
+import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import { format, formatDistanceToNow } from "date-fns"
+import { format, formatDistanceToNow, isBefore, startOfDay } from "date-fns"
 import { authOptions } from "@/lib/auth"
 import { getDashboardData } from "@/lib/queries/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { CheckCircle2, Clock, AlertCircle, TrendingUp } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, TrendingUp, MessageSquare, Paperclip, Folder, User } from "lucide-react"
 import { statusToBadgeVariant, priorityLabel } from "@/lib/constants/tasks"
+
+function personLabel(name: string | null | undefined, email: string) {
+  return name?.trim() || email
+}
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect("/login")
 
   const data = await getDashboardData(session.user.id)
+  const todayStart = startOfDay(new Date())
 
   const stats = [
     { label: "Total Tasks", value: String(data.totalTasks), icon: CheckCircle2, color: "text-[var(--primary)]" },
@@ -52,21 +58,55 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>My Tasks</CardTitle>
+            <Link href="/board" className="text-sm font-medium text-[var(--primary)] hover:underline">
+              Open board
+            </Link>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {data.myTasks.length === 0 ? (
                 <p className="text-sm text-[var(--text-muted)]">No assigned tasks yet.</p>
               ) : (
-                data.myTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between border-b border-[var(--border)] pb-4 last:border-0 last:pb-0"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium text-[var(--text)]">{task.title}</p>
+                data.myTasks.map((task) => {
+                  const due = task.dueDate ? new Date(task.dueDate) : null
+                  const overdueVisible =
+                    !!due && isBefore(due, todayStart) && task.status !== "DONE"
+                  const creator = task.createdBy
+                  const assigneeName = task.assignee
+                    ? personLabel(task.assignee.name, task.assignee.email)
+                    : null
+                  return (
+                    <div
+                      key={task.id}
+                      className="space-y-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="font-medium text-[var(--text)]">{task.title}</p>
+                          {task.description ? (
+                            <p className="line-clamp-3 text-sm leading-relaxed text-[var(--text-muted)]">
+                              {task.description}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          {due ? (
+                            <span
+                              className={`text-sm font-medium ${
+                                overdueVisible ? "text-[var(--error)]" : "text-[var(--text-muted)]"
+                              }`}
+                            >
+                              {overdueVisible ? "Overdue · " : ""}
+                              {format(due, "MMM d, yyyy")}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-[var(--text-muted)]">No due date</span>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant={statusToBadgeVariant(task.status)}>
                           {task.status.replaceAll("_", " ")}
@@ -83,14 +123,59 @@ export default async function DashboardPage() {
                           {priorityLabel(task.priority)}
                         </Badge>
                       </div>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--border)] pt-3 text-xs text-[var(--text-muted)]">
+                        {task.project?.name ? (
+                          <span className="flex items-center gap-1.5">
+                            <Folder className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{task.project.name}</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                            <Folder className="h-3.5 w-3.5" />
+                            No project
+                          </span>
+                        )}
+                        {creator ? (
+                          <span className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 shrink-0" />
+                            <span>
+                              Created by{" "}
+                              <span className="font-medium text-[var(--text)]">
+                                {personLabel(creator.name, creator.email)}
+                              </span>
+                            </span>
+                          </span>
+                        ) : null}
+                        {assigneeName ? (
+                          <span className="flex items-center gap-1.5">
+                            <span className="font-medium text-[var(--text)]">Assignee:</span> {assigneeName}
+                          </span>
+                        ) : null}
+                        <span className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            {task._count.comments}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Paperclip className="h-3.5 w-3.5" />
+                            {task._count.attachments}
+                          </span>
+                        </span>
+                        <span className="text-[var(--text-muted)]">
+                          Updated {formatDistanceToNow(task.updatedAt, { addSuffix: true })}
+                        </span>
+                      </div>
+
+                      <Link
+                        href="/board"
+                        className="inline-block text-xs font-medium text-[var(--primary)] hover:underline"
+                      >
+                        View on task board →
+                      </Link>
                     </div>
-                    <span className="text-sm text-[var(--text-muted)]">
-                      {task.dueDate
-                        ? format(new Date(task.dueDate), "MMM d")
-                        : "—"}
-                    </span>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </CardContent>
@@ -113,17 +198,37 @@ export default async function DashboardPage() {
                     .join("")
                     .slice(0, 2)
                     .toUpperCase()
+                  const t = log.task
                   return (
-                    <div key={log.id} className="flex items-start gap-3">
+                    <div key={log.id} className="flex items-start gap-3 border-b border-[var(--border)] pb-4 last:border-0 last:pb-0">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>{initials}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 space-y-1">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <p className="text-sm text-[var(--text)]">
                           <span className="font-medium">{label}</span>{" "}
                           <span className="text-[var(--text-muted)]">{log.action.toLowerCase().replaceAll("_", " ")}</span>{" "}
-                          <span className="font-medium">{log.task?.title ?? "task"}</span>
+                          <span className="font-medium">{t?.title ?? "task"}</span>
                         </p>
+                        {t ? (
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            {t.project?.name ? (
+                              <span className="flex items-center gap-1 text-[var(--text-muted)]">
+                                <Folder className="h-3 w-3" />
+                                {t.project.name}
+                              </span>
+                            ) : null}
+                            <Badge variant={statusToBadgeVariant(t.status)} className="text-[10px]">
+                              {t.status.replaceAll("_", " ")}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              {priorityLabel(t.priority)}
+                            </Badge>
+                          </div>
+                        ) : null}
+                        {t?.description ? (
+                          <p className="line-clamp-2 text-xs text-[var(--text-muted)]">{t.description}</p>
+                        ) : null}
                         <p className="text-xs text-[var(--text-muted)]">
                           {formatDistanceToNow(log.createdAt, { addSuffix: true })}
                         </p>

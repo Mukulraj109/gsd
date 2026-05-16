@@ -169,7 +169,19 @@ function DraggableTask({
             )}
           </div>
           <h4 className="mb-2 font-medium text-[var(--text)]">{task.title}</h4>
+          {task.description ? (
+            <p className="mb-2 line-clamp-3 text-xs leading-relaxed text-[var(--text-muted)]">{task.description}</p>
+          ) : null}
           {task.projectName && <p className="mb-2 text-xs text-[var(--text-muted)]">{task.projectName}</p>}
+          {task.createdBy && (
+            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <span className="font-medium text-[var(--text)]">Created by</span>
+              <Avatar className="h-5 w-5">
+                <AvatarFallback className="text-[10px]">{task.createdBy.initials}</AvatarFallback>
+              </Avatar>
+              <span>{task.createdBy.label}</span>
+            </p>
+          )}
           <div className="mb-2">
             <label className="sr-only" htmlFor={`st-${task.id}`}>
               Status

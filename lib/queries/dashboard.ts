@@ -31,14 +31,28 @@ export async function getDashboardData(userId: string) {
       where: { assigneeId: userId },
       orderBy: { updatedAt: "desc" },
       take: 8,
-      include: { project: { select: { name: true } } },
+      include: {
+        project: { select: { name: true } },
+        createdBy: { select: { name: true, email: true } },
+        assignee: { select: { name: true, email: true } },
+        _count: { select: { comments: true, attachments: true } },
+      },
     }),
     prisma.activityLog.findMany({
       orderBy: { createdAt: "desc" },
       take: 8,
       include: {
         user: { select: { name: true, email: true } },
-        task: { select: { title: true } },
+        task: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            status: true,
+            priority: true,
+            project: { select: { name: true } },
+          },
+        },
       },
     }),
   ])
