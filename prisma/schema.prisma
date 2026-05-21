@@ -10,12 +10,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Team {
+  DEV
+  OPS
+  CORE
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
   image         String?
   role          String    @default("MEMBER")
+  team          Team?
+  devTeamAccess Boolean   @default(false)
   emailVerified DateTime?
   password      String?
   createdAt     DateTime  @default(now())
@@ -30,7 +38,6 @@ model User {
 
   @@map("users")
 }
-
 
 model Account {
   id                String  @id @default(cuid())
@@ -64,6 +71,7 @@ model Session {
 
 model Task {
   id          String    @id @default(cuid())
+  displayId   Int       @unique @default(autoincrement())
   title       String
   description String?
   status      String    @default("TODO")
@@ -71,6 +79,7 @@ model Task {
   coverImage  String?
   dueDate     DateTime?
   position    Int
+  closedAt    DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -91,12 +100,12 @@ model Task {
   @@map("tasks")
 }
 
-
 model Project {
   id          String   @id @default(cuid())
   name        String
   description String?
   color       String?
+  team        Team     @default(OPS)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -146,10 +155,10 @@ model Attachment {
 }
 
 model ActivityLog {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   action    String
   details   String?
-  createdAt DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -157,9 +166,9 @@ model ActivityLog {
   user   User?  @relation(fields: [userId], references: [id])
 
   @@index([taskId, createdAt])
+  @@index([userId, createdAt])
   @@map("activity_logs")
 }
-
 
 model AutomationRule {
   id        String   @id @default(cuid())

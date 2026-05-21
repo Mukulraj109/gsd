@@ -1,16 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geologica } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-const inter = Inter({
+const geologica = Geologica({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "GSD - Get Stuff Done",
+  title: "Get Stuff Done",
   description: "Professional task management for the FirstStep Team",
+  icons: {
+    icon: "/brand/fst-logo.png",
+    apple: "/brand/fst-logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -19,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full">
+    <html lang="en" className={`${geologica.variable} h-full antialiased`}>
+      <body className="min-h-full font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

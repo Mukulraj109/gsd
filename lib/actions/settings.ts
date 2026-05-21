@@ -14,5 +14,5 @@ export async function setAutomationRuleEnabledAction(id: string, enabled: boolea
     where: { id },
     data: { enabled },
   })
-  revalidatePath("/settings")
+  revalidatePath("/admin/settings")
 }

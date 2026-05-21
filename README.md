@@ -1,6 +1,12 @@
 # GSD - Get Stuff Done
 
-A professional task management application built for the FirstStep Team. Manage tasks, collaborate with your team, and track progress with our beautiful Kanban board.
+A professional task management application built for the FirstStep Team. Manage tasks, collaborate with your team, and track progress with our Kanban board.
+
+**Stack:** Next.js App Router, PostgreSQL, Prisma, NextAuth (credentials only), Zepto Mail for notifications.
+
+**Access model:** Admins create users (email + password). No public signup, OAuth, or password reset. Members use Dashboard, Task Board, and Task Table. Admins unlock **Admin Panel** (`/admin/gate` + `ADMIN_GATE_PIN`) for Team Directory, global Activity, and Settings.
+
+**Teams:** Admins browse Dev / Ops / Core. Members see **My tasks** plus their assigned team only; **team board access** (admin checkbox) gates viewing all tasks on that team’s board. Member dashboard metrics are personal (assigned tasks only).
 
 ![GSD Screenshot](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)

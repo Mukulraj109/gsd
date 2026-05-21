@@ -1,0 +1,90 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { format, addHours, addMinutes } from "date-fns"
+import { Clock, Globe, Sun, Moon } from "lucide-react"
+
+export type TaskFormProjectOption = { id: string; name: string }
+export type TaskFormMemberOption = { id: string; name: string | null; email: string }
+
+type Props = {
+  projects?: TaskFormProjectOption[]
+  members?: TaskFormMemberOption[]
+  pageTitle?: string
+  showFilters?: boolean
+  filterSlot?: React.ReactNode
+  actionSlot?: React.ReactNode
+}
+
+function getIndiaTime(date: Date) {
+  return addMinutes(addHours(date, 5), 30)
+}
+
+function getUSTime(date: Date) {
+  return addHours(date, -10)
+}
+
+export function AppHeader({
+  pageTitle = "Get Stuff Done",
+  filterSlot,
+  actionSlot,
+}: Props) {
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const indiaTime = getIndiaTime(currentTime)
+  const usTime = getUSTime(currentTime)
+  const isPM = currentTime.getHours() >= 12
+
+  return (
+    <header className="relative flex h-24 shrink-0 items-center justify-between border-b border-[var(--border)] bg-gradient-to-r from-white via-slate-50 to-white px-4 lg:h-28 lg:px-8">
+      <div className="flex min-w-0 flex-1 items-center">{filterSlot}</div>
+      <h1 className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-3xl font-extrabold tracking-tight text-[var(--heading)] lg:text-5xl" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+        {pageTitle}
+      </h1>
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
+        {actionSlot}
+        <div className="hidden items-center gap-4 rounded-2xl border border-[var(--border)] bg-gradient-to-br from-slate-50 via-white to-slate-50 px-5 py-3 shadow-md lg:flex">
+          <div className="flex items-center gap-2 text-[var(--primary)]">
+            {isPM ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </div>
+          <div className="h-10 w-px bg-gradient-to-b from-transparent via-[var(--border)] to-transparent" />
+          <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+            <Globe className="h-4 w-4" />
+            <span className="text-xs font-semibold uppercase tracking-wider">Time</span>
+          </div>
+          <div className="flex gap-6">
+            <div className="flex flex-col items-center">
+              <div className="mb-1 flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-[var(--primary)]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">India</span>
+              </div>
+              <span className="font-mono text-xl font-bold tracking-wide text-[var(--heading)] tabular-nums">
+                {format(indiaTime, "hh:mm:ss")}
+              </span>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                {format(indiaTime, "a")}
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="mb-1 flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-[var(--secondary)]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--secondary)]">US</span>
+              </div>
+              <span className="font-mono text-xl font-bold tracking-wide text-[var(--heading)] tabular-nums">
+                {format(usTime, "hh:mm:ss")}
+              </span>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                {format(usTime, "a")}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  )
+}

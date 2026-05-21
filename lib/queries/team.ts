@@ -5,7 +5,9 @@ export async function getTeamMembers() {
     orderBy: { name: "asc" },
     include: {
       _count: {
-        select: { assignedTasks: { where: { status: { not: "DONE" } } } },
+        select: {
+          assignedTasks: { where: { status: { notIn: ["DONE", "CLOSED"] } } },
+        },
       },
     },
   })

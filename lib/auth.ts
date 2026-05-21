@@ -1,10 +1,9 @@
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import GoogleProvider from "next-auth/providers/google"
-import GitHubProvider from "next-auth/providers/github"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import type { TeamSlug } from "@/lib/constants/teams"
 
 const providers: NextAuthOptions["providers"] = [
   CredentialsProvider({
@@ -21,9 +20,7 @@ const providers: NextAuthOptions["providers"] = [
       const email = credentials.email.trim().toLowerCase()
 
       const user = await prisma.user.findUnique({
-        where: {
-          email,
-        },
+        where: { email },
       })
 
       if (!user || !user.password) {
@@ -41,28 +38,12 @@ const providers: NextAuthOptions["providers"] = [
         email: user.email,
         name: user.name,
         role: user.role,
+        team: user.team,
+        devTeamAccess: user.devTeamAccess,
       }
     },
   }),
 ]
-
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  providers.push(
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    })
-  )
-}
-
-if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
-  providers.push(
-    GitHubProvider({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
-    })
-  )
-}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -74,9 +55,26 @@ export const authOptions: NextAuthOptions = {
   },
   providers,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
-        token.role = user.role ?? undefined
+        token.role = user.role ?? "MEMBER"
+        token.team = user.team ?? null
+        token.devTeamAccess = user.devTeamAccess ?? false
+      } else if (trigger === "update" && token.sub) {
+        // Only refresh from DB when session.update() is called — not on every page load.
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: { role: true, team: true, devTeamAccess: true },
+          })
+          if (dbUser) {
+            token.role = dbUser.role
+            token.team = dbUser.team
+            token.devTeamAccess = dbUser.devTeamAccess
+          }
+        } catch {
+          // Keep existing JWT claims if DB is unreachable (e.g. Render free tier waking up).
+        }
       }
       return token
     },
@@ -84,6 +82,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.sub!
         session.user.role = (token.role as string | undefined) ?? "MEMBER"
+        session.user.team = (token.team as TeamSlug | null) ?? null
+        session.user.devTeamAccess = Boolean(token.devTeamAccess)
       }
       return session
     },

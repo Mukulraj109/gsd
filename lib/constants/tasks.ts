@@ -1,9 +1,12 @@
-export const TASK_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const
+export const TASK_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "CLOSED"] as const
 
 export type TaskStatus = (typeof TASK_STATUSES)[number]
 
+export const BOARD_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const
+export type BoardStatus = (typeof BOARD_STATUSES)[number]
+
 export const BOARD_COLUMNS: {
-  id: TaskStatus
+  id: BoardStatus
   title: string
   color: string
 }[] = [

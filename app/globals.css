@@ -1,19 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  /* FirstStep Brand Colors */
-  --primary: #0039A6;
-  --primary-hover: #002B7F;
-  --secondary: #007BFF;
-  --secondary-hover: #0056B3;
-  --heading: #1B2559;
-  --background: #F4F7FE;
-  --border: #E2E8F0;
-  --text: #4A5568;
-  --text-muted: #A3AED0;
-  --success: #05CD99;
-  --warning: #FFB547;
-  --error: #EE5D50;
+  /* FirstStep Brand Colors (from firststep_frontend theme) */
+  --primary: #1e4a5f;
+  --primary-hover: #0f2633;
+  --primary-light: #5b8fa3;
+  --secondary: #4fb3a9;
+  --secondary-hover: #357a7a;
+  --secondary-light: #7dd3d8;
+  --heading: #1e293b;
+  --footer-dark: #023345;
+  --background: #f8fafb;
+  --border: #e2e8f0;
+  --text: #64748b;
+  --text-body: #070924;
+  --text-muted: #94a3b8;
+  --success: #05cd99;
+  --warning: #ffb547;
+  --error: #ee5d50;
 }
 
 @theme inline {
@@ -29,19 +33,67 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-error: var(--error);
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geologica", ui-sans-serif, system-ui, sans-serif;
   --radius: 12px;
+}
+
+/* Slightly larger base type on desktop (Tailwind uses rem) */
+html {
+  font-size: 16px;
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1536px) {
+  html {
+    font-size: 18px;
+  }
 }
 
 body {
   background: var(--background);
-  color: var(--text);
+  color: var(--text-body);
   font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--heading);
   font-weight: 600;
+}
+
+/* Thin, on-brand scrollbars (board columns, overflow areas) */
+.scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 35%, var(--border)) transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 30%, var(--border));
+  border-radius: 9999px;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 50%, var(--border));
 }

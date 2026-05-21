@@ -19,11 +19,11 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Filter, MoreVertical, MessageSquare, Paperclip, GripVertical } from "lucide-react"
+import { Filter, MessageSquare, Paperclip, GripVertical } from "lucide-react"
 import {
   BOARD_COLUMNS,
-  TASK_STATUSES,
-  type TaskStatus,
+  BOARD_STATUSES,
+  type BoardStatus,
   priorityLabel,
   statusToBadgeVariant,
 } from "@/lib/constants/tasks"
@@ -32,24 +32,36 @@ import {
   createTaskAction,
   persistBoardOrderAction,
   updateTaskStatusAction,
+  closeTaskAction,
   type BoardPositionUpdate,
 } from "@/lib/actions/tasks"
+import { TaskDetailPanel } from "@/components/tasks/task-detail-panel"
+import { CreateTaskDialog } from "@/components/tasks/create-task-dialog"
 
-type Props = { initialTasks: BoardTaskRow[]; projectNames: string[] }
+type Member = { id: string; name: string | null; email: string }
+type Project = { id: string; name: string }
 
-function toColumns(tasks: BoardTaskRow[]): Record<TaskStatus, BoardTaskRow[]> {
-  const map = {} as Record<TaskStatus, BoardTaskRow[]>
-  for (const s of TASK_STATUSES) map[s] = []
+type Props = {
+  initialTasks: BoardTaskRow[]
+  projectNames: string[]
+  members: Member[]
+  projects: Project[]
+  browseProjectId?: string | null
+}
+
+function toColumns(tasks: BoardTaskRow[]): Record<BoardStatus, BoardTaskRow[]> {
+  const map = {} as Record<BoardStatus, BoardTaskRow[]>
+  for (const s of BOARD_STATUSES) map[s] = []
   for (const t of tasks) {
-    const st = (TASK_STATUSES as readonly string[]).includes(t.status) ? (t.status as TaskStatus) : "TODO"
+    const st = (BOARD_STATUSES as readonly string[]).includes(t.status) ? (t.status as BoardStatus) : "TODO"
     map[st].push(t)
   }
   return map
 }
 
-function flattenUpdates(cols: Record<TaskStatus, BoardTaskRow[]>): BoardPositionUpdate[] {
+function flattenUpdates(cols: Record<BoardStatus, BoardTaskRow[]>): BoardPositionUpdate[] {
   const updates: BoardPositionUpdate[] = []
-  for (const st of TASK_STATUSES) {
+  for (const st of BOARD_STATUSES) {
     cols[st].forEach((t, i) => {
       updates.push({ id: t.id, status: st, position: i })
     })
@@ -57,21 +69,21 @@ function flattenUpdates(cols: Record<TaskStatus, BoardTaskRow[]>): BoardPosition
   return updates
 }
 
-function cloneCols(cols: Record<TaskStatus, BoardTaskRow[]>): Record<TaskStatus, BoardTaskRow[]> {
-  const n = {} as Record<TaskStatus, BoardTaskRow[]>
-  for (const s of TASK_STATUSES) n[s] = [...cols[s]]
+function cloneCols(cols: Record<BoardStatus, BoardTaskRow[]>): Record<BoardStatus, BoardTaskRow[]> {
+  const n = {} as Record<BoardStatus, BoardTaskRow[]>
+  for (const s of BOARD_STATUSES) n[s] = [...cols[s]]
   return n
 }
 
 function moveBoard(
-  cols: Record<TaskStatus, BoardTaskRow[]>,
+  cols: Record<BoardStatus, BoardTaskRow[]>,
   activeId: string,
   overId: string
-): Record<TaskStatus, BoardTaskRow[]> | null {
+): Record<BoardStatus, BoardTaskRow[]> | null {
   if (activeId === overId) return null
 
   let moving: BoardTaskRow | undefined
-  for (const s of TASK_STATUSES) {
+  for (const s of BOARD_STATUSES) {
     const t = cols[s].find((x) => x.id === activeId)
     if (t) {
       moving = t
@@ -81,16 +93,16 @@ function moveBoard(
   if (!moving) return null
 
   const next = cloneCols(cols)
-  for (const s of TASK_STATUSES) next[s] = next[s].filter((x) => x.id !== activeId)
+  for (const s of BOARD_STATUSES) next[s] = next[s].filter((x) => x.id !== activeId)
 
-  const overIsColumn = (TASK_STATUSES as readonly string[]).includes(overId)
+  const overIsColumn = (BOARD_STATUSES as readonly string[]).includes(overId)
   if (overIsColumn) {
-    const to = overId as TaskStatus
+    const to = overId as BoardStatus
     next[to].push({ ...moving, status: to })
     return next
   }
 
-  for (const s of TASK_STATUSES) {
+  for (const s of BOARD_STATUSES) {
     const idx = next[s].findIndex((x) => x.id === overId)
     if (idx >= 0) {
       const arr = [...next[s]]
@@ -114,12 +126,12 @@ function formatDue(iso: string | null) {
   return { text: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), overdue: false }
 }
 
-function DroppableColumn({ id, children }: { id: TaskStatus; children: React.ReactNode }) {
+function DroppableColumn({ id, children }: { id: BoardStatus; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[220px] flex-1 space-y-3 rounded-b-lg bg-gray-50 p-3 ${isOver ? "ring-2 ring-[var(--primary)] ring-offset-1" : ""}`}
+      className={`scrollbar-subtle min-h-[12rem] flex-1 space-y-3 overflow-y-auto rounded-b-xl bg-[var(--background)] p-3 ${isOver ? "ring-2 ring-[var(--primary)] ring-offset-1" : ""}`}
     >
       {children}
     </div>
@@ -131,11 +143,15 @@ function DraggableTask({
   columnTitle,
   pending,
   onStatusChange,
+  onOpen,
+  onClose,
 }: {
   task: BoardTaskRow
   columnTitle: string
   pending: boolean
   onStatusChange: (taskId: string, value: string) => void
+  onOpen: () => void
+  onClose: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
   const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.45 : 1 }
@@ -145,7 +161,11 @@ function DraggableTask({
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm"
+      className="cursor-pointer rounded-lg border border-[var(--border)] bg-white p-5 shadow-sm"
+      onClick={onOpen}
+      onKeyDown={(e) => e.key === "Enter" && onOpen()}
+      role="button"
+      tabIndex={0}
     >
       <div className="mb-2 flex items-start gap-2">
         <button
@@ -159,28 +179,28 @@ function DraggableTask({
         </button>
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-start justify-between gap-2">
-            <Badge variant="outline" className="max-w-[120px] truncate font-mono text-xs">
-              {task.id.slice(0, 8)}…
+            <Badge variant="outline" className="max-w-[140px] truncate font-mono text-sm">
+              {task.displayLabel}
             </Badge>
             {task.priority === "HIGH" && (
-              <Badge variant="error" className="shrink-0 text-xs">
+              <Badge variant="error" className="shrink-0 text-sm">
                 High
               </Badge>
             )}
           </div>
-          <h4 className="mb-2 font-medium text-[var(--text)]">{task.title}</h4>
+          <h4 className="mb-2 text-base font-semibold text-[var(--heading)]">{task.title}</h4>
           {task.description ? (
-            <p className="mb-2 line-clamp-3 text-xs leading-relaxed text-[var(--text-muted)]">{task.description}</p>
+            <p className="mb-2 line-clamp-3 text-sm leading-relaxed text-[var(--text-muted)]">{task.description}</p>
           ) : null}
-          {task.projectName && <p className="mb-2 text-xs text-[var(--text-muted)]">{task.projectName}</p>}
+          {task.projectName && <p className="mb-2 text-sm text-[var(--text-muted)]">{task.projectName}</p>}
           {task.createdBy && (
-            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+            <div className="mb-2 flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
               <span className="font-medium text-[var(--text)]">Created by</span>
               <Avatar className="h-5 w-5">
                 <AvatarFallback className="text-[10px]">{task.createdBy.initials}</AvatarFallback>
               </Avatar>
               <span>{task.createdBy.label}</span>
-            </p>
+            </div>
           )}
           <div className="mb-2">
             <label className="sr-only" htmlFor={`st-${task.id}`}>
@@ -188,7 +208,7 @@ function DraggableTask({
             </label>
             <select
               id={`st-${task.id}`}
-              className="w-full rounded-md border border-[var(--border)] bg-white px-2 py-1 text-xs"
+              className="w-full rounded-md border border-[var(--border)] bg-white px-2 py-2 text-sm"
               value={task.status}
               disabled={pending}
               onChange={(e) => onStatusChange(task.id, e.target.value)}
@@ -210,35 +230,50 @@ function DraggableTask({
             </div>
             <div className="flex items-center gap-2 text-[var(--text-muted)]">
               {task.commentCount > 0 && (
-                <span className="flex items-center gap-1 text-xs">
-                  <MessageSquare className="h-3 w-3" />
+                <span className="flex items-center gap-1 text-sm">
+                  <MessageSquare className="h-4 w-4" />
                   {task.commentCount}
                 </span>
               )}
               {task.attachmentCount > 0 && (
-                <span className="flex items-center gap-1 text-xs">
-                  <Paperclip className="h-3 w-3" />
+                <span className="flex items-center gap-1 text-sm">
+                  <Paperclip className="h-4 w-4" />
                   {task.attachmentCount}
                 </span>
               )}
             </div>
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-xs">
               {priorityLabel(task.priority)}
             </Badge>
-            <Badge variant={statusToBadgeVariant(task.status)} className="text-[10px]">
+            <Badge variant={statusToBadgeVariant(task.status)} className="text-xs">
               {columnTitle}
             </Badge>
           </div>
           {due && (
             <div
-              className={`mt-2 text-xs ${
+              className={`mt-2 text-sm ${
                 typeof due === "object" && due.overdue ? "text-[var(--error)]" : "text-[var(--text-muted)]"
               }`}
             >
               {typeof due === "string" ? `📅 ${due}` : `${due.overdue ? "⚠️ " : "📅 "}${due.text}`}
             </div>
+          )}
+          {task.status === "DONE" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-2 w-full"
+              disabled={pending}
+              onClick={(e) => {
+                e.stopPropagation()
+                onClose()
+              }}
+            >
+              Close task
+            </Button>
           )}
         </div>
       </div>
@@ -246,15 +281,27 @@ function DraggableTask({
   )
 }
 
-export function BoardClient({ initialTasks, projectNames }: Props) {
+export function BoardClient({
+  initialTasks,
+  projectNames,
+  members,
+  projects,
+  browseProjectId = null,
+}: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [columns, setColumns] = useState(() => toColumns(initialTasks))
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [addingFor, setAddingFor] = useState<TaskStatus | null>(null)
+  const [addingFor, setAddingFor] = useState<BoardStatus | null>(null)
   const [newTitle, setNewTitle] = useState("")
   const [priorityFilter, setPriorityFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL")
   const [projectFilter, setProjectFilter] = useState<string>("ALL")
+  const [nameQuery, setNameQuery] = useState("")
+  const [createdByFilter, setCreatedByFilter] = useState("ALL")
+  const [assigneeFilter, setAssigneeFilter] = useState("ALL")
+  const [dueFilter, setDueFilter] = useState("")
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
 
   useEffect(() => {
     startTransition(() => {
@@ -262,23 +309,35 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
     })
   }, [initialTasks, startTransition])
 
+  useEffect(() => {
+    setCreatedByFilter("ALL")
+    setAssigneeFilter("ALL")
+  }, [browseProjectId])
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const filteredColumns = useMemo(() => {
     const out = cloneCols(columns)
-    for (const s of TASK_STATUSES) {
+    for (const s of BOARD_STATUSES) {
       out[s] = out[s].filter((t) => {
         if (priorityFilter !== "ALL" && t.priority !== priorityFilter) return false
         if (projectFilter !== "ALL" && (t.projectName ?? "") !== projectFilter) return false
+        if (nameQuery.trim() && !t.title.toLowerCase().includes(nameQuery.trim().toLowerCase())) return false
+        if (createdByFilter !== "ALL" && t.createdById !== createdByFilter) return false
+        if (assigneeFilter !== "ALL" && t.assigneeId !== assigneeFilter) return false
+        if (dueFilter) {
+          const d = t.dueDate?.slice(0, 10)
+          if (d !== dueFilter) return false
+        }
         return true
       })
     }
     return out
-  }, [columns, priorityFilter, projectFilter])
+  }, [columns, priorityFilter, projectFilter, nameQuery, createdByFilter, assigneeFilter, dueFilter])
 
   const activeTask = useMemo(() => {
     if (!activeId) return null
-    for (const s of TASK_STATUSES) {
+    for (const s of BOARD_STATUSES) {
       const t = columns[s].find((x) => x.id === activeId)
       if (t) return t
     }
@@ -288,14 +347,14 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
   const onStatusChange = useCallback(
     (taskId: string, value: string) => {
       startTransition(async () => {
-        await updateTaskStatusAction(taskId, value as TaskStatus)
+        await updateTaskStatusAction(taskId, value as BoardStatus)
         router.refresh()
       })
     },
     [router, startTransition]
   )
 
-  function submitNewTask(columnStatus: TaskStatus) {
+  function submitNewTask(columnStatus: BoardStatus) {
     const t = newTitle.trim()
     if (!t) return
     startTransition(async () => {
@@ -327,16 +386,56 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--heading)]">Task Board</h1>
-          <p className="text-[var(--text-muted)]">Drag tasks between columns. Filters apply to the view only.</p>
+    <div className="flex min-h-0 flex-1 flex-col gap-5">
+      <section className="shrink-0 rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm lg:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--heading)] lg:text-2xl">Task Board</h2>
+            <p className="text-sm text-[var(--text-muted)]">Drag cards between columns · click a card to edit</p>
+          </div>
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            + Create Task
+          </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter className="h-4 w-4 text-[var(--text-muted)]" />
+        <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+          <Filter className="h-5 w-5 shrink-0 text-[var(--text-muted)]" aria-hidden />
+          <Input
+            placeholder="Search by task name…"
+            className="min-w-[12rem] flex-1 sm:max-w-xs"
+            value={nameQuery}
+            onChange={(e) => setNameQuery(e.target.value)}
+          />
           <select
-            className="h-9 rounded-md border border-[var(--border)] bg-white px-2 text-sm"
+            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
+            value={createdByFilter}
+            onChange={(e) => setCreatedByFilter(e.target.value)}
+            aria-label="Created by"
+          >
+            <option value="ALL">Created by</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>{m.name ?? m.email}</option>
+            ))}
+          </select>
+          <select
+            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+            aria-label="Assigned to"
+          >
+            <option value="ALL">Assigned to</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>{m.name ?? m.email}</option>
+            ))}
+          </select>
+          <Input
+            type="date"
+            className="w-44 shrink-0"
+            value={dueFilter}
+            onChange={(e) => setDueFilter(e.target.value)}
+            aria-label="Due date"
+          />
+          <select
+            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as typeof priorityFilter)}
             aria-label="Filter by priority"
@@ -347,7 +446,7 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
             <option value="LOW">Low</option>
           </select>
           <select
-            className="h-9 rounded-md border border-[var(--border)] bg-white px-2 text-sm"
+            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
             aria-label="Filter by project"
@@ -360,7 +459,7 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
             ))}
           </select>
         </div>
-      </div>
+      </section>
 
       <DndContext
         sensors={sensors}
@@ -368,22 +467,24 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 overflow-x-auto">
-          <div className="inline-flex h-full gap-4 pb-4" style={{ minWidth: "100%" }}>
+        <div className="scrollbar-subtle min-h-0 flex-1 overflow-x-auto pb-1 xl:overflow-x-hidden">
+          <div className="flex h-full min-h-[32rem] gap-4 xl:grid xl:min-h-[calc(100vh-17rem)] xl:grid-cols-4">
             {BOARD_COLUMNS.map((column) => {
               const colTasks = filteredColumns[column.id] ?? []
               return (
-                <div key={column.id} className="flex w-80 flex-col">
+                <div
+                  key={column.id}
+                  className="flex w-[18rem] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm sm:w-[20rem] xl:min-w-0 xl:w-auto"
+                >
                   <div
-                    className={`flex items-center justify-between rounded-t-lg border-t-4 ${column.color} bg-white p-4`}
+                    className={`flex shrink-0 items-center justify-between border-t-4 px-4 py-3.5 ${column.color}`}
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-[var(--text)]">{column.title}</h3>
-                      <Badge variant="outline">{colTasks.length}</Badge>
+                      <h3 className="text-lg font-semibold text-[var(--heading)]">{column.title}</h3>
+                      <Badge variant="outline" className="tabular-nums">
+                        {colTasks.length}
+                      </Badge>
                     </div>
-                    <button type="button" className="text-[var(--text-muted)] hover:text-[var(--text)]">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
                   </div>
 
                   <DroppableColumn id={column.id}>
@@ -394,6 +495,13 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
                         columnTitle={column.title}
                         pending={pending}
                         onStatusChange={onStatusChange}
+                        onOpen={() => setDetailId(task.id)}
+                        onClose={() => {
+                          startTransition(async () => {
+                            await closeTaskAction(task.id)
+                            router.refresh()
+                          })
+                        }}
                       />
                     ))}
                     {addingFor === column.id ? (
@@ -425,7 +533,7 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
                     ) : (
                       <button
                         type="button"
-                        className="w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                        className="w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-base text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
                         disabled={pending}
                         onClick={() => {
                           setAddingFor(column.id)
@@ -449,6 +557,20 @@ export function BoardClient({ initialTasks, projectNames }: Props) {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <TaskDetailPanel
+        taskId={detailId}
+        open={!!detailId}
+        onOpenChange={(o) => !o && setDetailId(null)}
+        members={members}
+        projects={projects}
+      />
+      <CreateTaskDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        members={members}
+        projects={projects}
+      />
     </div>
   )
 }

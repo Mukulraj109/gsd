@@ -2,44 +2,57 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-const APP_PREFIXES = ["/dashboard", "/board", "/team", "/activity", "/settings"] as const
+const MEMBER_PREFIXES = ["/dashboard", "/board", "/tasks"] as const
+const ADMIN_PREFIXES = ["/admin"] as const
+const LEGACY_REDIRECTS: Record<string, string> = {
+  "/team": "/admin/gate",
+  "/activity": "/admin/gate",
+  "/settings": "/admin/gate",
+  "/signup": "/login",
+  "/forgot-password": "/login",
+  "/reset-password": "/login",
+}
 
-function isAppRoute(pathname: string) {
-  return APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+function matches(prefixes: readonly string[], pathname: string) {
+  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
 
 function isAuthPage(pathname: string) {
-  return pathname.startsWith("/login") || pathname.startsWith("/signup")
+  return pathname.startsWith("/login")
 }
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const secret = process.env.NEXTAUTH_SECRET
-  if (!secret) {
-    if (isAppRoute(pathname) || isAuthPage(pathname)) {
-      return new NextResponse("Missing NEXTAUTH_SECRET", { status: 500 })
-    }
-    return NextResponse.next()
+
+  const legacy = LEGACY_REDIRECTS[pathname]
+  if (legacy) {
+    return NextResponse.redirect(new URL(legacy, req.url))
   }
 
-  const token = await getToken({ req, secret })
+  const secret = process.env.NEXTAUTH_SECRET
+  const needsAuth =
+    matches(MEMBER_PREFIXES, pathname) ||
+    matches(ADMIN_PREFIXES, pathname) ||
+    isAuthPage(pathname)
+
+  if (!secret && needsAuth) {
+    return new NextResponse("Missing NEXTAUTH_SECRET", { status: 500 })
+  }
+
+  const token = await getToken({ req, secret: secret! })
 
   if (isAuthPage(pathname) && token) {
     return NextResponse.redirect(new URL("/dashboard", req.url))
   }
 
-  if (pathname.startsWith("/forgot-password") && token) {
-    return NextResponse.redirect(new URL("/dashboard", req.url))
-  }
-
-  if (pathname.startsWith("/reset-password") && token) {
-    return NextResponse.redirect(new URL("/dashboard", req.url))
-  }
-
-  if (isAppRoute(pathname) && !token) {
+  if ((matches(MEMBER_PREFIXES, pathname) || matches(ADMIN_PREFIXES, pathname)) && !token) {
     const login = new URL("/login", req.url)
     login.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(login)
+  }
+
+  if (matches(ADMIN_PREFIXES, pathname) && token?.role !== "ADMIN") {
+    return NextResponse.redirect(new URL("/dashboard", req.url))
   }
 
   return NextResponse.next()
@@ -49,9 +62,11 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/board/:path*",
-    "/team/:path*",
-    "/activity/:path*",
-    "/settings/:path*",
+    "/tasks/:path*",
+    "/admin/:path*",
+    "/team",
+    "/activity",
+    "/settings",
     "/login",
     "/signup",
     "/forgot-password",

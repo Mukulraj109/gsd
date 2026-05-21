@@ -1,28 +1,31 @@
-# GSD Frontend Navigation Guide
+# GSD Navigation Guide
 
-## 🎉 Complete Frontend Implementation
+Application: **http://localhost:3000** (after `npx prisma migrate deploy` and `npx tsx prisma/seed.ts`)
 
-All pages are now fully built and navigable! The application is running at **http://localhost:3000**
+## Routes
 
-## 📱 Available Pages & Routes
+### Public
+- `/` — Landing (sign in only)
+- `/login` — Credentials login (no signup / OAuth / reset)
 
-### Public Pages
-- **Homepage** - `/` - Landing page with branding and quick links
-- **Login** - `/login` - Sign in page with test credentials
-- **Sign Up** - `/signup` - User registration page
+### Members (sidebar: Dashboard, Task Board, Task Table + browse by team)
+- `/dashboard?team=DEV|OPS|CORE` — Stats scoped to team; recent activity = **your** actions only
+- `/board?team=…` — Kanban + filters + task detail panel + close from Done
+- `/tasks?team=…` — Task table view
 
-### Protected Pages (App Layout with Sidebar)
-- **Dashboard** - `/dashboard` - Overview with stats, my tasks, and recent activity
-- **Task Board** - `/board` - Full Kanban board with 4 columns (To Do, In Progress, Review, Done)
-- **Team Directory** - `/team` - Team members table with load balance and top contributors
-- **Activity** - `/activity` - Complete activity feed with timeline
-- **Settings** - `/settings` - Multi-tab settings (User Management, Project Config, Automation, Security)
+### Admins (`ADMIN` role + `/admin/gate` PIN)
+- `/admin/gate` — PIN entry (`ADMIN_GATE_PIN`)
+- `/admin/team` — Create/delete members (email + password)
+- `/admin/activity` — Full workspace activity timeline
+- `/admin/settings` — Project CRUD (with team) + automation toggles (Zepto email)
+
+Legacy `/team`, `/activity`, `/settings` redirect to admin gate.
 
 ## 🎨 Design Features Implemented
 
-### FirstStep Brand Colors
-- **Primary Blue**: `#0039A6` - Buttons, active nav, primary actions
-- **Secondary Blue**: `#007BFF` - Interactive elements, In Progress status
+### FirstStep Brand Colors (teal palette)
+- **Primary**: `#1e4a5f`
+- **Secondary**: `#4fb3a9`
 - **Heading Navy**: `#1B2559` - All headings and titles
 - **Background Grey**: `#F4F7FE` - Page backgrounds
 - **Border Grey**: `#E2E8F0` - Card and table borders
