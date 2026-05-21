@@ -23,22 +23,22 @@ export default function Home() {
 
       {/* Header with clock */}
       <header className="relative z-10 border-b border-black/5 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-8">
-          <div className="flex items-center gap-4">
+        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-8 lg:h-28">
+          <div className="flex items-center gap-5">
             <Image
               src="/brand/fst-logo.png"
               alt="FirstStep"
-              width={200}
-              height={70}
-              className="h-14 w-auto"
+              width={280}
+              height={98}
+              className="h-16 w-auto lg:h-20"
               priority
             />
-            <span className="hidden text-base font-semibold text-[var(--text-muted)] sm:block">| GSD Board</span>
+            <span className="hidden text-xl font-bold text-[var(--text-muted)] sm:block lg:text-2xl">| GSD Board</span>
           </div>
           <div className="flex items-center gap-6">
             <LandingClock />
             <Link href="/login">
-              <Button size="lg" className="h-12 px-8 text-base font-semibold">
+              <Button size="lg" className="h-12 px-8 text-lg font-bold shadow-lg">
                 Sign In
               </Button>
             </Link>
@@ -50,20 +50,20 @@ export default function Home() {
       <main className="relative z-10 mx-auto max-w-7xl px-8 py-24 lg:py-40">
         <div className="flex flex-col items-center text-center">
           {/* Badge */}
-          <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-[var(--primary)]/20 bg-[var(--primary)]/5 px-6 py-2">
+          <div className="mb-10 inline-flex items-center gap-3 rounded-full border-2 border-[var(--primary)]/20 bg-[var(--primary)]/5 px-8 py-3">
             <span className="relative flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--secondary)] opacity-75" />
               <span className="relative inline-flex h-3 w-3 rounded-full bg-[var(--secondary)]" />
             </span>
-            <span className="text-base font-semibold text-[var(--primary)]">FirstStep Team Platform</span>
+            <span className="text-lg font-bold text-[var(--primary)] lg:text-xl">FirstStep Team Platform</span>
           </div>
 
           {/* Main Title */}
-          <h1 className="max-w-5xl text-6xl font-black leading-tight tracking-tight text-[var(--heading)] lg:text-8xl">
+          <h1 className="max-w-5xl text-6xl font-black leading-none tracking-tight text-[var(--heading)] lg:text-9xl xl:text-[10rem]">
             Get <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] bg-clip-text text-transparent">Stuff</span> Done
           </h1>
 
-          <p className="mt-8 max-w-3xl text-2xl font-medium text-[var(--text-muted)] lg:text-3xl">
+          <p className="mt-10 max-w-3xl text-2xl font-medium text-[var(--text-muted)] lg:text-4xl">
             Professional task management that helps your team stay organized, collaborate effectively, and ship faster.
           </p>
 
