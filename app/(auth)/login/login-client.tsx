@@ -1,24 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { Eye, EyeOff, ArrowLeft, Clock, Globe, Sun, Moon, Shield, Mail, UserPlus } from "lucide-react"
-import { format, addHours, addMinutes } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useClientNow } from "@/hooks/use-client-now"
+import {
+  CLOCK_PLACEHOLDER_SHORT,
+  formatZoneClock,
+  INDIA_TIME_ZONE,
+  US_TIME_ZONE,
+} from "@/lib/world-clock"
 
 type Props = { showSeedHints: boolean }
-
-function getIndiaTime(date: Date) {
-  return addMinutes(addHours(date, 5), 30)
-}
-
-function getUSTime(date: Date) {
-  return addHours(date, -10)
-}
 
 export function LoginClient({ showSeedHints }: Props) {
   const router = useRouter()
@@ -29,12 +27,7 @@ export function LoginClient({ showSeedHints }: Props) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [currentTime, setCurrentTime] = useState(new Date())
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
+  const now = useClientNow()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -57,9 +50,13 @@ export function LoginClient({ showSeedHints }: Props) {
     }
   }
 
-  const indiaTime = getIndiaTime(currentTime)
-  const usTime = getUSTime(currentTime)
-  const isPM = currentTime.getHours() >= 12
+  const isPM = now ? now.getHours() >= 12 : true
+  const indiaDisplay = now
+    ? formatZoneClock(now, INDIA_TIME_ZONE, { withSeconds: false })
+    : CLOCK_PLACEHOLDER_SHORT
+  const usDisplay = now
+    ? formatZoneClock(now, US_TIME_ZONE, { withSeconds: false })
+    : CLOCK_PLACEHOLDER_SHORT
 
   return (
     <div className="relative flex min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-teal-50">
@@ -109,15 +106,21 @@ export function LoginClient({ showSeedHints }: Props) {
                   <div className="flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-[var(--primary)]" />
                     <span className="text-sm font-medium text-[var(--text-muted)]">IN</span>
-                    <span className="font-mono text-base font-bold tabular-nums text-[var(--heading)]">
-                      {format(indiaTime, "hh:mm a")}
+                    <span
+                      className="font-mono text-base font-bold tabular-nums text-[var(--heading)]"
+                      suppressHydrationWarning
+                    >
+                      {indiaDisplay}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-[var(--secondary)]" />
                     <span className="text-sm font-medium text-[var(--text-muted)]">US</span>
-                    <span className="font-mono text-base font-bold tabular-nums text-[var(--heading)]">
-                      {format(usTime, "hh:mm a")}
+                    <span
+                      className="font-mono text-base font-bold tabular-nums text-[var(--heading)]"
+                      suppressHydrationWarning
+                    >
+                      {usDisplay}
                     </span>
                   </div>
                 </div>
