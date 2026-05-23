@@ -35,6 +35,9 @@ yarn-error.log*
 !.env.example
 !.env.render.example
 
+# Firebase service account (contains sensitive credentials)
+firebase-service-account.json
+
 # vercel
 .vercel
 

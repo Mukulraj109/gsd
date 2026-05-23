@@ -104,7 +104,7 @@ export function SignupClient({ oauthGoogle, oauthGitHub, inviteToken, showSeedHi
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-4 sm:p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4 flex justify-center">

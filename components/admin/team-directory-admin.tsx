@@ -195,7 +195,8 @@ export function TeamDirectoryAdmin({ members, teamLabels }: Props) {
             />
           </div>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
+        <CardContent className="p-0">
+          <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-base">
             <thead>
               <tr className="border-b border-[var(--border)] bg-gray-50 text-left text-[var(--heading)]">
@@ -265,11 +266,87 @@ export function TeamDirectoryAdmin({ members, teamLabels }: Props) {
               ))}
             </tbody>
           </table>
+          </div>
+
+          <div className="space-y-3 p-4 lg:hidden">
+            {filtered.map((m) => (
+              <article
+                key={m.id}
+                className="space-y-3 rounded-xl border border-[var(--border)] bg-white p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarFallback className="text-sm">
+                        {(m.name ?? m.email).slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-medium text-[var(--text-body)]">{m.name ?? "—"}</p>
+                      <p className="truncate text-sm text-[var(--text-muted)]">{m.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10"
+                      title="Edit member"
+                      disabled={pending}
+                      onClick={() => openEdit(m)}
+                    >
+                      <Pencil className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 text-[var(--error)]"
+                      title="Delete member"
+                      disabled={pending}
+                      onClick={() => removeMember(m.id)}
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="text-[var(--text-muted)]">ID</dt>
+                    <dd className="font-mono font-medium">{m.displayId}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--text-muted)]">Role</dt>
+                    <dd>
+                      <Badge className="text-xs" variant={m.role === "ADMIN" ? "default" : "outline"}>
+                        {m.role}
+                      </Badge>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--text-muted)]">Team</dt>
+                    <dd className="font-medium">{teamLabelForRow(m, teamLabels)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--text-muted)]">Team board</dt>
+                    <dd className="font-medium">
+                      {m.role === "ADMIN" ? "All" : m.devTeamAccess ? "Yes" : "No"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--text-muted)]">Active tasks</dt>
+                    <dd className="font-medium tabular-nums">{m.activeTasks}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={!!editMember} onOpenChange={(open) => !open && setEditMember(null)}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
           <form onSubmit={submitEdit}>
             <DialogHeader>
               <DialogTitle>Edit member</DialogTitle>
@@ -379,7 +456,7 @@ export function TeamDirectoryAdmin({ members, teamLabels }: Props) {
       </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
           {createdCreds ? (
             <>
               <DialogHeader>

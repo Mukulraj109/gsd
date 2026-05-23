@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   Dialog,
@@ -21,12 +21,24 @@ import {
   closeTaskAction,
   addCommentAction,
 } from "@/lib/actions/tasks"
-import { BOARD_COLUMNS, priorityLabel, statusToBadgeVariant } from "@/lib/constants/tasks"
+import { BOARD_COLUMNS, statusToBadgeVariant } from "@/lib/constants/tasks"
 import type { BoardStatus } from "@/lib/constants/tasks"
 import { format } from "date-fns"
+import { Loader2, Paperclip, ChevronDown, ChevronUp } from "lucide-react"
+import { AttachmentList, type AttachmentData } from "./attachment-list"
+import { AttachmentUpload } from "./attachment-upload"
 
 type Member = { id: string; name: string | null; email: string }
 type Project = { id: string; name: string }
+
+type TaskDraft = {
+  description: string
+  status: BoardStatus
+  priority: string
+  assigneeId: string
+  projectId: string
+  dueDate: string
+}
 
 type Props = {
   taskId: string | null
@@ -36,36 +48,119 @@ type Props = {
   projects: Project[]
 }
 
+function taskToDraft(task: NonNullable<Awaited<ReturnType<typeof getTaskDetailAction>>>): TaskDraft {
+  return {
+    description: task.description ?? "",
+    status: task.status as BoardStatus,
+    priority: task.priority,
+    assigneeId: task.assigneeId ?? "",
+    projectId: task.projectId ?? "",
+    dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",
+  }
+}
+
+function isDraftDirty(
+  task: NonNullable<Awaited<ReturnType<typeof getTaskDetailAction>>>,
+  draft: TaskDraft
+): boolean {
+  return (
+    draft.description !== (task.description ?? "") ||
+    draft.status !== task.status ||
+    draft.priority !== task.priority ||
+    (draft.assigneeId || null) !== (task.assigneeId ?? null) ||
+    (draft.projectId || null) !== (task.projectId ?? null) ||
+    draft.dueDate !== (task.dueDate ? task.dueDate.slice(0, 10) : "")
+  )
+}
+
 export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [task, setTask] = useState<Awaited<ReturnType<typeof getTaskDetailAction>>>(null)
+  const [draft, setDraft] = useState<TaskDraft | null>(null)
   const [comment, setComment] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [showAttachments, setShowAttachments] = useState(false)
+  const [attachments, setAttachments] = useState<AttachmentData[]>([])
+  const [attachmentsUploading, setAttachmentsUploading] = useState(false)
 
   useEffect(() => {
     if (!open || !taskId) {
       setTask(null)
+      setDraft(null)
+      setAttachments([])
+      setError(null)
       return
     }
     startTransition(async () => {
       const data = await getTaskDetailAction(taskId)
       setTask(data)
+      if (data) {
+        setDraft(taskToDraft(data))
+      }
+      if (data?.attachments) {
+        setAttachments(data.attachments as AttachmentData[])
+      }
     })
   }, [open, taskId])
 
+  const isDirty = useMemo(() => {
+    if (!task || !draft) return false
+    return isDraftDirty(task, draft)
+  }, [task, draft])
+
+  const requestClose = useCallback((): boolean => {
+    if (attachmentsUploading) {
+      if (!confirm("Files are still uploading. Close without waiting?")) {
+        return false
+      }
+    }
+    if (isDirty) {
+      if (!confirm("You have unsaved changes. Discard them?")) {
+        return false
+      }
+    }
+    return true
+  }, [attachmentsUploading, isDirty])
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next && !requestClose()) return
+      onOpenChange(next)
+    },
+    [onOpenChange, requestClose]
+  )
+
+  const handleClose = useCallback(() => {
+    if (requestClose()) onOpenChange(false)
+  }, [onOpenChange, requestClose])
+
   if (!open || !taskId) return null
 
-  function saveField(patch: Parameters<typeof updateTaskAction>[0]) {
+  function updateDraft(patch: Partial<TaskDraft>) {
+    setDraft((prev) => (prev ? { ...prev, ...patch } : prev))
+  }
+
+  function saveTask() {
+    if (!task || !draft || !isDirty) return
     setError(null)
     startTransition(async () => {
       try {
-        await updateTaskAction(patch)
+        await updateTaskAction({
+          taskId: task.id,
+          description: draft.description,
+          status: draft.status,
+          priority: draft.priority,
+          assigneeId: draft.assigneeId || null,
+          projectId: draft.projectId || null,
+          dueDate: draft.dueDate || null,
+        })
         const data = await getTaskDetailAction(taskId!)
         setTask(data)
+        if (data) setDraft(taskToDraft(data))
         router.refresh()
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Update failed")
+        setError(err instanceof Error ? err.message : "Save failed")
       }
     })
   }
@@ -77,13 +172,22 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
       setComment("")
       const data = await getTaskDetailAction(taskId!)
       setTask(data)
+      if (data) setDraft(taskToDraft(data))
       router.refresh()
     })
   }
 
+  const refreshAttachments = () => {
+    getTaskDetailAction(taskId!).then((data) => {
+      if (data?.attachments) {
+        setAttachments(data.attachments as AttachmentData[])
+      }
+    })
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-left text-xl">{task?.title ?? "Task details"}</DialogTitle>
           <DialogDescription>
@@ -93,7 +197,7 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
           </DialogDescription>
         </DialogHeader>
 
-        {!task ? (
+        {!task || !draft ? (
           <p className="py-6 text-center text-sm text-[var(--text-muted)]">Loading…</p>
         ) : (
           <>
@@ -103,24 +207,25 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
               <span>Created by {task.createdBy.name ?? task.createdBy.email}</span>
               <span>·</span>
               <span>{format(task.createdAt, "MMM d, yyyy")}</span>
+              {isDirty && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
+                  Unsaved changes
+                </span>
+              )}
             </div>
 
             {error && <p className="text-sm text-[var(--error)]">{error}</p>}
 
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="space-y-4 md:col-span-2">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-4 sm:col-span-2 lg:col-span-2">
                 <div>
                   <Label>Description</Label>
                   <textarea
                     className="mt-1 w-full rounded-md border border-[var(--border)] p-2 text-sm"
                     rows={4}
-                    defaultValue={task.description ?? ""}
+                    value={draft.description}
                     disabled={pending}
-                    onBlur={(e) => {
-                      if (e.target.value !== (task.description ?? "")) {
-                        saveField({ taskId: task.id, description: e.target.value })
-                      }
-                    }}
+                    onChange={(e) => updateDraft({ description: e.target.value })}
                   />
                 </div>
 
@@ -157,6 +262,49 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
                     </Button>
                   </form>
                 </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold">
+                      <Paperclip className="h-4 w-4" />
+                      Attachments
+                      {attachments.length > 0 && (
+                        <span className="rounded-full bg-[var(--primary)]/10 px-2 py-0.5 text-xs text-[var(--primary)]">
+                          {attachments.length}
+                        </span>
+                      )}
+                    </h3>
+                    {attachments.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowAttachments(!showAttachments)}
+                      >
+                        {showAttachments ? (
+                          <><ChevronUp className="h-4 w-4 mr-1" /> Hide</>
+                        ) : (
+                          <><ChevronDown className="h-4 w-4 mr-1" /> Show</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+
+                  {showAttachments || attachments.length === 0 ? (
+                    <div className="space-y-4">
+                      <AttachmentUpload
+                        taskId={taskId!}
+                        onUploadComplete={refreshAttachments}
+                        onUploadingChange={setAttachmentsUploading}
+                        compact
+                      />
+                      <AttachmentList
+                        attachments={attachments}
+                        currentUserId={task.createdBy.id}
+                        onDelete={refreshAttachments}
+                      />
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -164,9 +312,9 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
                   <Label>Status</Label>
                   <select
                     className="mt-1 h-10 w-full rounded-md border px-2 text-sm"
-                    value={task.status}
+                    value={draft.status}
                     disabled={pending}
-                    onChange={(e) => saveField({ taskId: task.id, status: e.target.value as BoardStatus })}
+                    onChange={(e) => updateDraft({ status: e.target.value as BoardStatus })}
                   >
                     {BOARD_COLUMNS.map((c) => (
                       <option key={c.id} value={c.id}>{c.title}</option>
@@ -177,9 +325,9 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
                   <Label>Priority</Label>
                   <select
                     className="mt-1 h-10 w-full rounded-md border px-2 text-sm"
-                    value={task.priority}
+                    value={draft.priority}
                     disabled={pending}
-                    onChange={(e) => saveField({ taskId: task.id, priority: e.target.value })}
+                    onChange={(e) => updateDraft({ priority: e.target.value })}
                   >
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
@@ -190,9 +338,9 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
                   <Label>Assignee</Label>
                   <select
                     className="mt-1 h-10 w-full rounded-md border px-2 text-sm"
-                    value={task.assigneeId ?? ""}
+                    value={draft.assigneeId}
                     disabled={pending}
-                    onChange={(e) => saveField({ taskId: task.id, assigneeId: e.target.value || null })}
+                    onChange={(e) => updateDraft({ assigneeId: e.target.value })}
                   >
                     <option value="">Unassigned</option>
                     {members.map((m) => (
@@ -205,18 +353,18 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
                   <Input
                     type="date"
                     className="mt-1"
-                    defaultValue={task.dueDate ? task.dueDate.slice(0, 10) : ""}
+                    value={draft.dueDate}
                     disabled={pending}
-                    onBlur={(e) => saveField({ taskId: task.id, dueDate: e.target.value || null })}
+                    onChange={(e) => updateDraft({ dueDate: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>Project</Label>
                   <select
                     className="mt-1 h-10 w-full rounded-md border px-2 text-sm"
-                    value={task.projectId ?? ""}
+                    value={draft.projectId}
                     disabled={pending}
-                    onChange={(e) => saveField({ taskId: task.id, projectId: e.target.value || null })}
+                    onChange={(e) => updateDraft({ projectId: e.target.value })}
                   >
                     <option value="">No project</option>
                     {projects.map((p) => (
@@ -224,7 +372,7 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
                     ))}
                   </select>
                 </div>
-                <Badge variant={statusToBadgeVariant(task.status)}>{task.status}</Badge>
+                <Badge variant={statusToBadgeVariant(draft.status)}>{draft.status}</Badge>
               </div>
             </div>
 
@@ -262,8 +410,22 @@ export function TaskDetailPanel({ taskId, open, onOpenChange, members, projects 
                     Close task
                   </Button>
                 )}
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button type="button" variant="outline" disabled={pending} onClick={handleClose}>
                   Close
+                </Button>
+                <Button
+                  type="button"
+                  disabled={pending || !isDirty || attachmentsUploading}
+                  onClick={saveTask}
+                >
+                  {pending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </Button>
               </div>
             </div>

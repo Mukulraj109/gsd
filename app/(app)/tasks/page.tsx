@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import {
   getSessionUser,
@@ -8,10 +7,8 @@ import {
 import { getTasksTable } from "@/lib/queries/tasks-table"
 import { TEAM_LABELS } from "@/lib/constants/teams"
 import { buildBrowseHref } from "@/lib/browse/build-browse-href"
-import { Badge } from "@/components/ui/badge"
-import { statusToBadgeVariant, priorityLabel } from "@/lib/constants/tasks"
-import { format } from "date-fns"
 import { BoardAccessNotice } from "@/components/board/board-access-notice"
+import { TasksTableView } from "@/components/tasks/tasks-table-view"
 
 type Props = {
   searchParams: Promise<{ team?: string; scope?: string; project?: string }>
@@ -52,62 +49,19 @@ export default async function TasksTablePage({ searchParams }: Props) {
       })
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <BoardAccessNotice
         accessDenied={ctx.accessDenied}
         deniedReason={ctx.deniedReason}
         memberTeam={user.team}
       />
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)] lg:text-5xl">Task Table</h1>
-        <p className="text-lg text-[var(--text-muted)]">{subtitle}</p>
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--heading)] sm:text-4xl lg:text-5xl">
+          Task Table
+        </h1>
+        <p className="text-base text-[var(--text-muted)] sm:text-lg">{subtitle}</p>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-white">
-        <table className="w-full text-base">
-          <thead>
-            <tr className="border-b bg-gray-50 text-left text-[var(--heading)]">
-              <th className="px-5 py-4 text-base font-semibold">ID</th>
-              <th className="px-5 py-4 text-base font-semibold">Title</th>
-              <th className="px-5 py-4 text-base font-semibold">Status</th>
-              <th className="px-5 py-4 text-base font-semibold">Priority</th>
-              <th className="px-5 py-4 text-base font-semibold">Assignee</th>
-              <th className="px-5 py-4 text-base font-semibold">Created by</th>
-              <th className="px-5 py-4 text-base font-semibold">Due</th>
-              <th className="px-5 py-4 text-base font-semibold">Project</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-base text-[var(--text-muted)]">
-                  No tasks in this view.
-                </td>
-              </tr>
-            ) : (
-              tasks.map((t) => (
-                <tr key={t.id} className="border-b border-[var(--border)] hover:bg-gray-50">
-                  <td className="px-5 py-4 font-mono text-sm">{t.displayLabel}</td>
-                  <td className="px-5 py-4">
-                    <Link href={boardHref} className="font-semibold text-[var(--primary)] hover:underline">
-                      {t.title}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge variant={statusToBadgeVariant(t.status)}>{t.status.replaceAll("_", " ")}</Badge>
-                  </td>
-                  <td className="px-5 py-4">{priorityLabel(t.priority)}</td>
-                  <td className="px-5 py-4">{t.assigneeLabel}</td>
-                  <td className="px-5 py-4">{t.createdByLabel}</td>
-                  <td className="px-5 py-4">
-                    {t.dueDate ? format(new Date(t.dueDate), "MMM d, yyyy") : "—"}
-                  </td>
-                  <td className="px-5 py-4">{t.projectName ?? "—"}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <TasksTableView tasks={tasks} boardHref={boardHref} />
     </div>
   )
 }

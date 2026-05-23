@@ -18,12 +18,14 @@ const navigation = [
   { name: "Task Table", href: "/tasks", icon: Table2 },
 ]
 
-type Props = {
+export type SidebarProps = {
   isAdmin: boolean
   accessibleTeams: TeamSlug[]
   memberTeam: TeamSlug | null
   canViewTeamBoard: boolean
   projects: SidebarProject[]
+  className?: string
+  onNavigate?: () => void
 }
 
 export function Sidebar({
@@ -32,7 +34,9 @@ export function Sidebar({
   memberTeam,
   canViewTeamBoard,
   projects,
-}: Props) {
+  className,
+  onNavigate,
+}: SidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { data: session } = useSession()
@@ -60,9 +64,14 @@ export function Sidebar({
   }
 
   return (
-    <div className="flex h-screen w-[17.5rem] shrink-0 flex-col border-r border-[var(--border)] bg-white lg:w-80">
+    <div
+      className={cn(
+        "flex h-full w-[17.5rem] shrink-0 flex-col border-r border-[var(--border)] bg-white lg:w-80",
+        className
+      )}
+    >
       <div className="overflow-hidden border-b border-[var(--border)] px-3 py-2">
-        <Link href="/dashboard" className="block leading-none">
+        <Link href="/dashboard" className="block leading-none" onClick={onNavigate}>
           <Image
             src="/brand/fst-logo.png"
             alt="FirstStep"
@@ -82,19 +91,16 @@ export function Sidebar({
         canViewTeamBoard={canViewTeamBoard}
       />
 
-      <ProjectBrowse
-        isAdmin={isAdmin}
-        memberTeam={memberTeam}
-        projects={projects}
-      />
+      <ProjectBrowse isAdmin={isAdmin} memberTeam={memberTeam} projects={projects} />
 
-      <nav className="flex-1 space-y-1.5 px-4 py-3">
+      <nav className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3">
         {navigation.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
           return (
             <Link
               key={item.name}
               href={navHref(item.href)}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-4 py-2.5 text-base font-medium transition-colors",
                 isActive ? "bg-[var(--primary)] text-white" : "text-[var(--text-body)] hover:bg-gray-100"
@@ -108,6 +114,7 @@ export function Sidebar({
         {isAdmin && (
           <Link
             href="/admin/gate"
+            onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 rounded-lg px-4 py-2.5 text-base font-medium transition-colors",
               pathname.startsWith("/admin")
@@ -123,7 +130,7 @@ export function Sidebar({
 
       <div className="space-y-3 border-t border-[var(--border)] p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--secondary)] text-white text-base font-semibold">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--secondary)] text-base font-semibold text-white">
             {initials}
           </div>
           <div className="min-w-0 flex-1">

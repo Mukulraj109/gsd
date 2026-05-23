@@ -23,22 +23,22 @@ export default function Home() {
 
       {/* Header with clock */}
       <header className="relative z-10 border-b border-black/5 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-8 lg:h-28">
-          <div className="flex items-center gap-5">
+        <div className="mx-auto flex h-auto min-h-[4.5rem] max-w-7xl flex-col items-start justify-between gap-4 px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:h-28 lg:px-8">
+          <div className="flex items-center gap-3 sm:gap-5">
             <Image
               src="/brand/fst-logo.png"
               alt="FirstStep"
               width={280}
               height={98}
-              className="h-16 w-auto lg:h-20"
+              className="h-12 w-auto sm:h-16 lg:h-20"
               priority
             />
-            <span className="hidden text-xl font-bold text-[var(--text-muted)] sm:block lg:text-2xl">| GSD Board</span>
+            <span className="hidden text-lg font-bold text-[var(--text-muted)] sm:block lg:text-2xl">| GSD Board</span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-6">
             <LandingClock />
             <Link href="/login">
-              <Button size="lg" className="h-12 px-8 text-lg font-bold shadow-lg">
+              <Button size="lg" className="h-11 w-full px-6 text-base font-bold shadow-lg sm:h-12 sm:w-auto sm:px-8 sm:text-lg">
                 Sign In
               </Button>
             </Link>
@@ -47,7 +47,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <main className="relative z-10 mx-auto max-w-7xl px-8 py-24 lg:py-40">
+      <main className="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-40">
         <div className="flex flex-col items-center text-center">
           {/* Badge */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--primary)]/20 bg-[var(--primary)]/5 px-4 py-1.5">
@@ -59,11 +59,11 @@ export default function Home() {
           </div>
 
           {/* Main Title */}
-          <h1 className="max-w-5xl text-5xl font-black leading-tight tracking-tight text-[var(--heading)] lg:text-7xl">
+          <h1 className="max-w-5xl text-4xl font-black leading-tight tracking-tight text-[var(--heading)] sm:text-5xl lg:text-7xl">
             Get <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] bg-clip-text text-transparent">Stuff</span> Done
           </h1>
 
-          <p className="mt-6 max-w-2xl text-xl text-[var(--text-muted)] lg:text-2xl">
+          <p className="mt-6 max-w-2xl text-lg text-[var(--text-muted)] sm:text-xl lg:text-2xl">
             Professional task management that helps your team stay organized, collaborate effectively, and ship faster.
           </p>
 

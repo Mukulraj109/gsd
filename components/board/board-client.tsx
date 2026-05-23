@@ -1,12 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  useDroppable,
+  TouchSensor,
   useDraggable,
   useSensor,
   useSensors,
@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Filter, MessageSquare, Paperclip, GripVertical } from "lucide-react"
+import { Filter, MessageSquare, Paperclip, GripVertical, ChevronDown, ChevronUp } from "lucide-react"
 import {
   BOARD_COLUMNS,
   BOARD_STATUSES,
@@ -37,6 +37,7 @@ import {
 } from "@/lib/actions/tasks"
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel"
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog"
+import { BoardColumn } from "@/components/board/board-column"
 
 type Member = { id: string; name: string | null; email: string }
 type Project = { id: string; name: string }
@@ -126,18 +127,6 @@ function formatDue(iso: string | null) {
   return { text: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), overdue: false }
 }
 
-function DroppableColumn({ id, children }: { id: BoardStatus; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id })
-  return (
-    <div
-      ref={setNodeRef}
-      className={`scrollbar-subtle min-h-[12rem] flex-1 space-y-3 overflow-y-auto rounded-b-xl bg-[var(--background)] p-3 ${isOver ? "ring-2 ring-[var(--primary)] ring-offset-1" : ""}`}
-    >
-      {children}
-    </div>
-  )
-}
-
 function DraggableTask({
   task,
   columnTitle,
@@ -161,54 +150,63 @@ function DraggableTask({
     <div
       ref={setNodeRef}
       style={style}
-      className="cursor-pointer rounded-lg border border-[var(--border)] bg-white p-5 shadow-sm"
+      className="cursor-pointer rounded-lg border border-[var(--border)] bg-white p-3 shadow-sm sm:p-4 lg:p-5"
       onClick={onOpen}
       onKeyDown={(e) => e.key === "Enter" && onOpen()}
       role="button"
       tabIndex={0}
     >
-      <div className="mb-2 flex items-start gap-2">
+      <div className="flex items-start gap-2">
         <button
           type="button"
-          className="mt-0.5 cursor-grab touch-none text-[var(--text-muted)] hover:text-[var(--text)] active:cursor-grabbing"
+          className="mt-0.5 shrink-0 cursor-grab touch-none text-[var(--text-muted)] hover:text-[var(--text)] active:cursor-grabbing"
           aria-label="Drag task"
+          onClick={(e) => e.stopPropagation()}
           {...listeners}
           {...attributes}
         >
           <GripVertical className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <Badge variant="outline" className="max-w-[140px] truncate font-mono text-sm">
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+            <Badge variant="outline" className="max-w-full truncate font-mono text-xs">
               {task.displayLabel}
             </Badge>
             {task.priority === "HIGH" && (
-              <Badge variant="error" className="shrink-0 text-sm">
+              <Badge variant="error" className="shrink-0 text-xs">
                 High
               </Badge>
             )}
+            <Badge variant="outline" className="text-xs lg:hidden">
+              {priorityLabel(task.priority)}
+            </Badge>
           </div>
-          <h4 className="mb-2 text-base font-semibold text-[var(--heading)]">{task.title}</h4>
+          <h4 className="mb-1.5 break-words text-sm font-semibold leading-snug text-[var(--heading)] sm:text-base">
+            {task.title}
+          </h4>
           {task.description ? (
-            <p className="mb-2 line-clamp-3 text-sm leading-relaxed text-[var(--text-muted)]">{task.description}</p>
+            <p className="mb-1.5 hidden line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)] sm:block">
+              {task.description}
+            </p>
           ) : null}
-          {task.projectName && <p className="mb-2 text-sm text-[var(--text-muted)]">{task.projectName}</p>}
+          {task.projectName && (
+            <p className="mb-1.5 truncate text-xs text-[var(--text-muted)] sm:text-sm">{task.projectName}</p>
+          )}
           {task.createdBy && (
-            <div className="mb-2 flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
-              <span className="font-medium text-[var(--text)]">Created by</span>
-              <Avatar className="h-5 w-5">
+            <div className="mb-1.5 flex items-center gap-1.5 text-xs text-[var(--text-muted)] sm:text-sm">
+              <Avatar className="h-5 w-5 shrink-0">
                 <AvatarFallback className="text-[10px]">{task.createdBy.initials}</AvatarFallback>
               </Avatar>
-              <span>{task.createdBy.label}</span>
+              <span className="truncate">{task.createdBy.label}</span>
             </div>
           )}
-          <div className="mb-2">
+          <div className="mb-1.5" onClick={(e) => e.stopPropagation()}>
             <label className="sr-only" htmlFor={`st-${task.id}`}>
               Status
             </label>
             <select
               id={`st-${task.id}`}
-              className="w-full rounded-md border border-[var(--border)] bg-white px-2 py-2 text-sm"
+              className="h-10 w-full rounded-md border border-[var(--border)] bg-white px-2 text-sm"
               value={task.status}
               disabled={pending}
               onChange={(e) => onStatusChange(task.id, e.target.value)}
@@ -220,15 +218,15 @@ function DraggableTask({
               ))}
             </select>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               {task.assignee && (
-                <Avatar className="h-6 w-6">
+                <Avatar className="h-6 w-6 shrink-0">
                   <AvatarFallback className="text-xs">{task.assignee.initials}</AvatarFallback>
                 </Avatar>
               )}
             </div>
-            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+            <div className="flex shrink-0 items-center gap-2 text-[var(--text-muted)]">
               {task.commentCount > 0 && (
                 <span className="flex items-center gap-1 text-sm">
                   <MessageSquare className="h-4 w-4" />
@@ -243,7 +241,7 @@ function DraggableTask({
               )}
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-1.5 hidden flex-wrap gap-1 lg:flex">
             <Badge variant="outline" className="text-xs">
               {priorityLabel(task.priority)}
             </Badge>
@@ -302,6 +300,12 @@ export function BoardClient({
   const [dueFilter, setDueFilter] = useState("")
   const [detailId, setDetailId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const mounted = useRef(false)
+
+  useEffect(() => {
+    mounted.current = true
+  }, [])
 
   useEffect(() => {
     startTransition(() => {
@@ -314,7 +318,10 @@ export function BoardClient({
     setAssigneeFilter("ALL")
   }, [browseProjectId])
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  )
 
   const filteredColumns = useMemo(() => {
     const out = cloneCols(columns)
@@ -386,27 +393,43 @@ export function BoardClient({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5">
-      <section className="shrink-0 rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm lg:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
+    <div className="flex flex-col gap-3 sm:gap-5 xl:min-h-0 xl:flex-1">
+      <section className="shrink-0 rounded-xl border border-[var(--border)] bg-white p-3 shadow-sm sm:p-4 lg:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 hidden lg:block">
             <h2 className="text-xl font-semibold text-[var(--heading)] lg:text-2xl">Task Board</h2>
             <p className="text-sm text-[var(--text-muted)]">Drag cards between columns · click a card to edit</p>
           </div>
-          <Button type="button" onClick={() => setCreateOpen(true)}>
+          <p className="text-xs text-[var(--text-muted)] lg:hidden">
+            Four sections below — scroll inside a section when it has many tasks
+          </p>
+          <Button type="button" className="h-11 w-full shrink-0 sm:w-auto" onClick={() => setCreateOpen(true)}>
             + Create Task
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-          <Filter className="h-5 w-5 shrink-0 text-[var(--text-muted)]" aria-hidden />
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-3 h-10 w-full gap-2 text-sm lg:hidden"
+          onClick={() => setFiltersOpen((o) => !o)}
+          aria-expanded={filtersOpen}
+        >
+          <Filter className="h-4 w-4" />
+          Filters
+          {filtersOpen ? <ChevronUp className="ml-auto h-4 w-4" /> : <ChevronDown className="ml-auto h-4 w-4" />}
+        </Button>
+        <div
+          className={`mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:mt-4 lg:flex lg:flex-wrap lg:items-center lg:gap-3 ${filtersOpen ? "grid" : "hidden lg:flex"}`}
+        >
+          <Filter className="hidden h-5 w-5 shrink-0 text-[var(--text-muted)] lg:block" aria-hidden />
           <Input
             placeholder="Search by task name…"
-            className="min-w-[12rem] flex-1 sm:max-w-xs"
+            className="h-10 w-full min-w-0 sm:col-span-2 lg:max-w-xs lg:flex-1"
             value={nameQuery}
             onChange={(e) => setNameQuery(e.target.value)}
           />
           <select
-            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
+            className="h-10 w-full min-w-0 rounded-md border border-[var(--border)] bg-white px-3 text-sm lg:min-w-[9rem] lg:w-auto lg:text-base"
             value={createdByFilter}
             onChange={(e) => setCreatedByFilter(e.target.value)}
             aria-label="Created by"
@@ -417,7 +440,7 @@ export function BoardClient({
             ))}
           </select>
           <select
-            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
+            className="h-10 w-full min-w-0 rounded-md border border-[var(--border)] bg-white px-3 text-sm lg:min-w-[9rem] lg:w-auto lg:text-base"
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
             aria-label="Assigned to"
@@ -429,13 +452,13 @@ export function BoardClient({
           </select>
           <Input
             type="date"
-            className="w-44 shrink-0"
+            className="h-10 w-full shrink-0 lg:w-44"
             value={dueFilter}
             onChange={(e) => setDueFilter(e.target.value)}
             aria-label="Due date"
           />
           <select
-            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
+            className="h-10 w-full min-w-0 rounded-md border border-[var(--border)] bg-white px-3 text-sm lg:min-w-[9rem] lg:w-auto lg:text-base"
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as typeof priorityFilter)}
             aria-label="Filter by priority"
@@ -446,7 +469,7 @@ export function BoardClient({
             <option value="LOW">Low</option>
           </select>
           <select
-            className="h-11 min-w-[9rem] rounded-md border border-[var(--border)] bg-white px-3 text-base"
+            className="h-10 w-full min-w-0 rounded-md border border-[var(--border)] bg-white px-3 text-sm lg:min-w-[9rem] lg:w-auto lg:text-base"
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
             aria-label="Filter by project"
@@ -461,33 +484,66 @@ export function BoardClient({
         </div>
       </section>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerWithin}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="scrollbar-subtle min-h-0 flex-1 overflow-x-auto pb-1 xl:overflow-x-hidden">
-          <div className="flex h-full min-h-[32rem] gap-4 xl:grid xl:min-h-[calc(100vh-17rem)] xl:grid-cols-4">
-            {BOARD_COLUMNS.map((column) => {
-              const colTasks = filteredColumns[column.id] ?? []
-              return (
-                <div
-                  key={column.id}
-                  className="flex w-[18rem] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm sm:w-[20rem] xl:min-w-0 xl:w-auto"
-                >
-                  <div
-                    className={`flex shrink-0 items-center justify-between border-t-4 px-4 py-3.5 ${column.color}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[var(--heading)]">{column.title}</h3>
-                      <Badge variant="outline" className="tabular-nums">
-                        {colTasks.length}
-                      </Badge>
+      {mounted.current ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="w-full xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
+            <div className="flex w-full flex-col gap-5 xl:grid xl:min-h-[calc(100vh-17rem)] xl:grid-cols-4 xl:items-stretch xl:gap-4">
+              {BOARD_COLUMNS.map((column) => {
+                const colTasks = filteredColumns[column.id] ?? []
+                const addCardFooter =
+                  addingFor === column.id ? (
+                    <div className="space-y-2 rounded-lg border border-[var(--border)] bg-white p-3">
+                      <Input
+                        placeholder="Task title"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        disabled={pending}
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button type="button" size="sm" disabled={pending} onClick={() => submitNewTask(column.id)}>
+                          Add
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setAddingFor(null)
+                            setNewTitle("")
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-full rounded-lg border-2 border-dashed border-gray-300 p-3 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50 sm:p-4 sm:text-base"
+                      disabled={pending}
+                      onClick={() => {
+                        setAddingFor(column.id)
+                        setNewTitle("")
+                      }}
+                    >
+                      + Add card
+                    </button>
+                  )
 
-                  <DroppableColumn id={column.id}>
+                return (
+                  <BoardColumn
+                    key={column.id}
+                    column={column}
+                    taskCount={colTasks.length}
+                    isEmpty={colTasks.length === 0}
+                    footer={addCardFooter}
+                  >
                     {colTasks.map((task) => (
                       <DraggableTask
                         key={task.id}
@@ -504,59 +560,24 @@ export function BoardClient({
                         }}
                       />
                     ))}
-                    {addingFor === column.id ? (
-                      <div className="space-y-2 rounded-lg border border-[var(--border)] bg-white p-3">
-                        <Input
-                          placeholder="Task title"
-                          value={newTitle}
-                          onChange={(e) => setNewTitle(e.target.value)}
-                          disabled={pending}
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button type="button" size="sm" disabled={pending} onClick={() => submitNewTask(column.id)}>
-                            Add
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setAddingFor(null)
-                              setNewTitle("")
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-base text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
-                        disabled={pending}
-                        onClick={() => {
-                          setAddingFor(column.id)
-                          setNewTitle("")
-                        }}
-                      >
-                        + Add card
-                      </button>
-                    )}
-                  </DroppableColumn>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-        <DragOverlay>
-          {activeTask ? (
-            <div className="max-w-xs rounded-lg border border-[var(--border)] bg-white p-3 shadow-lg">
-              <p className="text-sm font-medium">{activeTask.title}</p>
+                  </BoardColumn>
+                )
+              })}
             </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          </div>
+          <DragOverlay>
+            {activeTask ? (
+              <div className="max-w-xs rounded-lg border border-[var(--border)] bg-white p-3 shadow-lg">
+                <p className="text-sm font-medium">{activeTask.title}</p>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        <div className="flex min-h-[32rem] items-center justify-center">
+          <p className="text-[var(--text-muted)]">Loading board...</p>
+        </div>
+      )}
 
       <TaskDetailPanel
         taskId={detailId}
@@ -570,6 +591,9 @@ export function BoardClient({
         onOpenChange={setCreateOpen}
         members={members}
         projects={projects}
+        onTaskCreated={(taskId) => {
+          setDetailId(taskId)
+        }}
       />
     </div>
   )

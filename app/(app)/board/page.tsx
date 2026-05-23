@@ -38,7 +38,7 @@ export default async function BoardPage({ searchParams }: Props) {
   const projectNames = [...new Set(projects.map((p) => p.name))]
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-col xl:min-h-0 xl:flex-1">
       <BoardAccessNotice
         accessDenied={ctx.accessDenied}
         deniedReason={ctx.deniedReason}

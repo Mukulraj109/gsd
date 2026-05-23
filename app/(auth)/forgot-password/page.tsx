@@ -39,8 +39,8 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-6">
-      <div className="w-full max-w-md rounded-lg border border-[var(--border)] bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-4 sm:p-6">
+      <div className="w-full max-w-md rounded-lg border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-2xl font-bold text-[var(--heading)]">Forgot password</h1>
         <p className="mt-2 text-sm text-[var(--text-muted)]">
           Enter your email. We will send a reset link if SMTP is configured and the account exists.

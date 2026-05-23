@@ -121,7 +121,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                       key={task.id}
                       className="space-y-4 rounded-xl border border-[var(--border)] bg-white p-5 shadow-sm lg:p-6"
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1 space-y-2">
                           <p className="text-lg font-semibold text-[var(--heading)]">{task.title}</p>
                           {task.description ? (
@@ -130,7 +130,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                             </p>
                           ) : null}
                         </div>
-                        <div className="shrink-0 text-right">
+                        <div className="shrink-0 sm:text-right">
                           {due ? (
                             <span
                               className={`text-base font-medium ${

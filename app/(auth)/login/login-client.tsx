@@ -70,17 +70,17 @@ export function LoginClient({ showSeedHints }: Props) {
       {/* Back link */}
       <Link
         href="/"
-        className="absolute left-8 top-8 z-20 flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--heading)]"
+        className="absolute left-4 top-4 z-20 flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--heading)] sm:left-8 sm:top-8"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to Home
       </Link>
 
       {/* Login form */}
-      <div className="relative z-10 flex w-full items-center justify-center px-6">
+      <div className="relative z-10 flex w-full items-center justify-center px-4 py-20 sm:px-6">
         <div className="w-full max-w-lg">
           <div className="rounded-3xl border border-[var(--border)]/50 bg-white/90 shadow-2xl backdrop-blur-md">
-            <div className="p-10">
+            <div className="p-6 sm:p-10">
               {/* Logo */}
               <div className="mb-8 flex flex-col items-center">
                 <Image
@@ -98,11 +98,11 @@ export function LoginClient({ showSeedHints }: Props) {
               </div>
 
               {/* Time widget */}
-              <div className="mb-8 flex items-center justify-center gap-5 rounded-2xl border border-[var(--border)] bg-gradient-to-r from-slate-50 to-white p-4">
+              <div className="mb-8 flex flex-col flex-wrap items-center justify-center gap-4 rounded-2xl border border-[var(--border)] bg-gradient-to-r from-slate-50 to-white p-4 sm:flex-row sm:gap-5">
                 {isPM ? <Moon className="h-5 w-5 text-[var(--primary)]" /> : <Sun className="h-5 w-5 text-[var(--secondary)]" />}
                 <div className="h-6 w-px bg-[var(--border)]" />
                 <Globe className="h-5 w-5 text-[var(--text-muted)]" />
-                <div className="flex gap-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
                   <div className="flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-[var(--primary)]" />
                     <span className="text-sm font-medium text-[var(--text-muted)]">IN</span>

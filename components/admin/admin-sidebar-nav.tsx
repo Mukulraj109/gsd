@@ -11,17 +11,18 @@ const adminNav: { name: string; href: string; icon: LucideIcon }[] = [
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ]
 
-export function AdminSidebarNav() {
+export function AdminSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
 
   return (
-    <nav className="flex-1 space-y-1.5 px-4 py-3">
+    <nav className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3">
       {adminNav.map((item) => {
         const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
         return (
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             aria-current={isActive ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 rounded-lg px-4 py-2.5 text-base font-medium transition-colors",

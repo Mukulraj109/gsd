@@ -24,9 +24,10 @@ type Props = {
   onOpenChange: (open: boolean) => void
   members: Member[]
   projects: Project[]
+  onTaskCreated?: (taskId: string) => void
 }
 
-export function CreateTaskDialog({ open, onOpenChange, members, projects }: Props) {
+export function CreateTaskDialog({ open, onOpenChange, members, projects, onTaskCreated }: Props) {
   const router = useRouter()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -55,7 +56,7 @@ export function CreateTaskDialog({ open, onOpenChange, members, projects }: Prop
     setError(null)
     startTransition(async () => {
       try {
-        await createTaskAction({
+        const newTask = await createTaskAction({
           title: t,
           description: description.trim() || undefined,
           priority,
@@ -66,6 +67,9 @@ export function CreateTaskDialog({ open, onOpenChange, members, projects }: Prop
         })
         onOpenChange(false)
         router.refresh()
+        if (onTaskCreated && newTask?.id) {
+          onTaskCreated(newTask.id)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not create task")
       }
@@ -74,7 +78,7 @@ export function CreateTaskDialog({ open, onOpenChange, members, projects }: Prop
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg">
         <form onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>

@@ -165,6 +165,8 @@ export async function createTaskAction(input: CreateTaskInput) {
   }
 
   revalidateTaskPaths()
+
+  return task
 }
 
 export async function updateTaskStatusAction(taskId: string, newStatus: BoardStatus) {
@@ -420,6 +422,10 @@ export async function getTaskDetailAction(taskId: string) {
       comments: {
         orderBy: { createdAt: "asc" },
         include: { user: { select: { name: true, email: true } } },
+      },
+      attachments: {
+        orderBy: { createdAt: "desc" },
+        include: { uploadedBy: { select: { id: true, name: true, email: true } } },
       },
       activities: {
         orderBy: { createdAt: "desc" },

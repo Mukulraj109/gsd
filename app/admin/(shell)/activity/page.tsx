@@ -51,13 +51,13 @@ export default async function AdminActivityPage() {
     .map(([k]) => k)
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight text-[var(--heading)] lg:text-5xl">Activity Timeline</h1>
-        <p className="text-lg text-[var(--text-muted)]">All workspace activity (admin only).</p>
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--heading)] sm:text-4xl lg:text-5xl">Activity Timeline</h1>
+        <p className="text-base text-[var(--text-muted)] sm:text-lg">All workspace activity (admin only).</p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="space-y-8 lg:col-span-2">
           {order.length === 0 ? (
             <p className="text-base text-[var(--text-muted)]">No activity yet.</p>
@@ -68,7 +68,7 @@ export default async function AdminActivityPage() {
                   <h2 className="text-base font-bold tracking-wider text-[var(--text-muted)]">{dayKey}</h2>
                   <div className="h-px flex-1 bg-[var(--border)]" />
                 </div>
-                <div className="relative space-y-6 pl-10 before:absolute before:left-[15px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-[var(--border)]">
+                <div className="relative space-y-6 pl-6 before:absolute before:left-[7px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-[var(--border)] sm:pl-10 sm:before:left-[15px]">
                   {grouped[dayKey]!.map((log) => {
                     const actor = log.user?.name ?? log.user?.email ?? "System"
                     const initials = actor
@@ -80,7 +80,7 @@ export default async function AdminActivityPage() {
                     const detail = formatActivityDetail(log.action, log.details)
                     return (
                       <div key={log.id} className="relative">
-                        <div className="absolute -left-10 top-2 z-10 h-8 w-8 rounded-full border-2 border-white bg-[var(--primary)] shadow-sm" />
+                        <div className="absolute -left-6 top-2 z-10 h-6 w-6 rounded-full border-2 border-white bg-[var(--primary)] shadow-sm sm:-left-10 sm:h-8 sm:w-8" />
                         <Card className="p-5 lg:p-6">
                           <div className="flex items-start gap-4">
                             <Avatar className="h-11 w-11">

@@ -11,16 +11,16 @@ export default async function AdminGatePage() {
   if (await hasValidAdminGate(user.id)) redirect("/admin/team")
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-4 sm:p-6">
       <Image
         src="/brand/fst-logo.png"
         alt="FirstStep"
         width={160}
         height={56}
-        className="mb-6 h-12"
+        className="mb-6 h-10 sm:h-12"
         style={{ width: "auto" }}
       />
-      <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-white p-8 shadow-sm">
+      <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-xl font-semibold text-[var(--heading)]">Admin Panel</h1>
         <p className="mt-2 text-sm text-[var(--text)]">
           {isAdminPinConfigured()
